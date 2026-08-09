@@ -69,3 +69,7 @@ Abre [http://localhost:3000](http://localhost:3000)
 | `npm run db:push`  | Sincroniza esquema       |
 | `npm run db:seed`  | Carga usuarios y demos   |
 | `npm run db:studio`| Prisma Studio            |
+
+## Deploy (Railway + Vercel)
+
+Postgres en **Railway**, app en **Vercel** (desde GitHub). Pasos y variables: ver [DEPLOY.md](./DEPLOY.md).

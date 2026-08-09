@@ -20,34 +20,36 @@ export type HouseExportRow = {
   photos: { slot: number; url: string }[];
 };
 
-function resolvePublicFile(url: string | null | undefined): string | null {
-  if (!url) return null;
-  if (url.startsWith("http://") || url.startsWith("https://")) return null;
-  const relative = url.replace(/^\//, "");
-  return path.join(process.cwd(), "public", relative);
-}
-
-function extensionFromPath(filePath: string): "png" | "jpeg" | "gif" | null {
-  const ext = path.extname(filePath).toLowerCase();
+function extensionFromName(name: string): "png" | "jpeg" | "gif" | null {
+  const clean = name.split("?")[0].toLowerCase();
+  const ext = path.extname(clean);
   if (ext === ".png") return "png";
   if (ext === ".jpg" || ext === ".jpeg") return "jpeg";
   if (ext === ".gif") return "gif";
-  if (ext === ".webp" || ext === ".svg") return "png"; // ExcelJS limited; try as png buffer may fail for svg
+  // webp/svg no embeben bien en ExcelJS
   return null;
 }
 
 async function tryReadImage(
   url: string | null | undefined
 ): Promise<{ buffer: Buffer; extension: "png" | "jpeg" | "gif" } | null> {
-  const filePath = resolvePublicFile(url);
-  if (!filePath) return null;
-  const extension = extensionFromPath(filePath);
-  if (!extension) return null;
+  if (!url) return null;
+
   try {
+    if (url.startsWith("http://") || url.startsWith("https://")) {
+      const extension = extensionFromName(url);
+      if (!extension) return null;
+      const res = await fetch(url);
+      if (!res.ok) return null;
+      const buffer = Buffer.from(await res.arrayBuffer());
+      return { buffer, extension };
+    }
+
+    const relative = url.replace(/^\//, "");
+    const filePath = path.join(process.cwd(), "public", relative);
+    const extension = extensionFromName(filePath);
+    if (!extension) return null;
     const buffer = await readFile(filePath);
-    // SVG no es imagen embebible fiable en Excel
-    if (path.extname(filePath).toLowerCase() === ".svg") return null;
-    if (path.extname(filePath).toLowerCase() === ".webp") return null;
     return { buffer, extension };
   } catch {
     return null;

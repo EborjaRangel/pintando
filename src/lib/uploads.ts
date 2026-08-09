@@ -1,3 +1,4 @@
+import { put } from "@vercel/blob";
 import { mkdir, writeFile } from "fs/promises";
 import path from "path";
 import { randomUUID } from "crypto";
@@ -22,6 +23,26 @@ function resolveMime(file: File): string {
   return file.type || "";
 }
 
+function mimeToExt(mime: string): string {
+  switch (mime) {
+    case "image/jpeg":
+    case "image/jpg":
+      return ".jpg";
+    case "image/png":
+      return ".png";
+    case "image/webp":
+      return ".webp";
+    case "application/pdf":
+      return ".pdf";
+    default:
+      return ".bin";
+  }
+}
+
+function useBlobStorage(): boolean {
+  return Boolean(process.env.BLOB_READ_WRITE_TOKEN);
+}
+
 export async function saveUpload(
   file: File,
   folder: "photos" | "comprobantes"
@@ -38,29 +59,23 @@ export async function saveUpload(
 
   const ext = path.extname(file.name) || mimeToExt(mime);
   const filename = `${randomUUID()}${ext}`;
+
+  // Producción (Vercel): Blob. Local: disco en public/uploads.
+  if (useBlobStorage()) {
+    const blob = await put(`uploads/${folder}/${filename}`, file, {
+      access: "public",
+      contentType: mime,
+      token: process.env.BLOB_READ_WRITE_TOKEN,
+    });
+    return blob.url;
+  }
+
   const relativeDir = path.join("uploads", folder);
   const absoluteDir = path.join(process.cwd(), "public", relativeDir);
-
   await mkdir(absoluteDir, { recursive: true });
 
   const buffer = Buffer.from(await file.arrayBuffer());
   await writeFile(path.join(absoluteDir, filename), buffer);
 
   return `/${relativeDir.replace(/\\/g, "/")}/${filename}`;
-}
-
-function mimeToExt(mime: string): string {
-  switch (mime) {
-    case "image/jpeg":
-    case "image/jpg":
-      return ".jpg";
-    case "image/png":
-      return ".png";
-    case "image/webp":
-      return ".webp";
-    case "application/pdf":
-      return ".pdf";
-    default:
-      return ".bin";
-  }
 }

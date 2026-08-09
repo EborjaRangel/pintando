@@ -6,6 +6,7 @@ import type { AppRole } from "@/lib/roles";
 
 export const authOptions: NextAuthOptions = {
   session: { strategy: "jwt" },
+  secret: process.env.NEXTAUTH_SECRET,
   pages: {
     signIn: "/login",
   },
