@@ -46,4 +46,8 @@ next-env.d.ts
 
 .railway-public-db.url
 .railway/
+.deploy-secret.note
+.env.local
 
+.vercel
+.env*
