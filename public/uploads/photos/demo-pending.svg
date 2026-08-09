@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600">
+  <rect width="800" height="600" fill="#ffedd5"/>
+  <rect x="250" y="180" width="300" height="220" fill="#ea580c"/>
+  <text x="400" y="500" text-anchor="middle" fill="#9a3412" font-family="Arial" font-size="28">Foto pendiente</text>
+</svg>

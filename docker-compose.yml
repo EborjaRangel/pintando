@@ -1,0 +1,16 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: pintura-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: pintura
+    ports:
+      - "5432:5432"
+    volumes:
+      - pintura_pg_data:/var/lib/postgresql/data
+
+volumes:
+  pintura_pg_data:

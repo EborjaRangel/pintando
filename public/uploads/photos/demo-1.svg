@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600">
+  <rect width="800" height="600" fill="#ccfbf1"/>
+  <rect x="220" y="180" width="360" height="280" fill="#0f766e"/>
+  <polygon points="220,180 400,80 580,180" fill="#115e59"/>
+  <rect x="360" y="320" width="80" height="140" fill="#f0fdfa"/>
+  <text x="400" y="520" text-anchor="middle" fill="#134e4a" font-family="Arial" font-size="28">Foto 1 · Fachada</text>
+</svg>

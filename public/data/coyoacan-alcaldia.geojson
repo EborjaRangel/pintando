@@ -1,0 +1,24 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": { "nombre": "Coyoacán", "alcaldia": "Coyoacán" },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-99.205, 19.298],
+            [-99.102, 19.298],
+            [-99.102, 19.318],
+            [-99.108, 19.358],
+            [-99.145, 19.368],
+            [-99.188, 19.368],
+            [-99.205, 19.34],
+            [-99.205, 19.298]
+          ]
+        ]
+      }
+    }
+  ]
+}

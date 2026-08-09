@@ -1,0 +1,89 @@
+@import "tailwindcss";
+@import "mapbox-gl/dist/mapbox-gl.css";
+@import "maplibre-gl/dist/maplibre-gl.css";
+
+/* Paleta inspirada en WhatsApp */
+:root {
+  --wa-dark: #075e54;
+  --wa-darker: #054c44;
+  --wa-teal: #128c7e;
+  --wa-green: #25d366;
+  --wa-light: #dcf8c6;
+  --wa-chat: #ece5dd;
+  --wa-panel: #f0f2f5;
+  --ink: #111b21;
+  --muted: #667781;
+  --accent: #25d366;
+  --accent-ink: #075e54;
+  --accent-soft: #dcf8c6;
+  --surface: #ffffff;
+  --surface-2: #f0f2f5;
+  --line: #e9edef;
+  --bg: #ece5dd;
+  --complete: #25d366;
+  --pending: #ea580c;
+  --header: #075e54;
+}
+
+@theme inline {
+  --color-background: var(--bg);
+  --color-foreground: var(--ink);
+  --color-wa-dark: #075e54;
+  --color-wa-teal: #128c7e;
+  --color-wa-green: #25d366;
+  --color-wa-light: #dcf8c6;
+  --color-wa-chat: #ece5dd;
+  --font-sans: var(--font-body);
+  --font-display: var(--font-display);
+}
+
+html {
+  overflow-x: clip;
+}
+
+body {
+  background:
+    radial-gradient(900px 420px at 0% 0%, rgba(37, 211, 102, 0.12) 0%, transparent 55%),
+    radial-gradient(700px 360px at 100% 0%, rgba(7, 94, 84, 0.1) 0%, transparent 50%),
+    linear-gradient(180deg, #f7f8fa 0%, var(--wa-chat) 45%, #e5ddd5 100%);
+  color: var(--ink);
+  min-height: 100dvh;
+}
+
+.field {
+  @apply w-full min-h-11 rounded-lg border border-[var(--line)] bg-white px-3 py-2.5 text-sm text-[var(--ink)] outline-none transition focus:border-[var(--wa-teal)] focus:ring-2 focus:ring-[var(--wa-light)];
+}
+
+.label {
+  @apply block text-sm font-medium text-[var(--ink)];
+}
+
+.error {
+  @apply text-sm text-red-600;
+}
+
+.btn-primary {
+  @apply inline-flex min-h-11 items-center justify-center rounded-lg bg-[var(--wa-teal)] px-4 py-2.5 text-sm font-medium text-white transition hover:bg-[var(--wa-dark)] disabled:cursor-not-allowed disabled:opacity-60;
+}
+
+.btn-secondary {
+  @apply inline-flex min-h-11 items-center justify-center rounded-lg border border-[var(--line)] bg-white px-4 py-2.5 text-sm font-medium text-[var(--ink)] transition hover:bg-[var(--surface-2)] disabled:cursor-not-allowed disabled:opacity-60;
+}
+
+.section-title {
+  @apply font-[family-name:var(--font-display)] text-xl tracking-tight text-[var(--wa-dark)];
+}
+
+.panel {
+  @apply rounded-2xl border border-[var(--line)] bg-white p-4 shadow-sm sm:p-6;
+}
+
+.maplibregl-map,
+.mapboxgl-map {
+  font: inherit;
+}
+
+.maplibregl-ctrl-attrib,
+.mapboxgl-ctrl-attrib {
+  font-size: 10px;
+}

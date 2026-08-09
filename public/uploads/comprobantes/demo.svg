@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="800" viewBox="0 0 600 800">
+  <rect width="600" height="800" fill="#ffffff" stroke="#d5e3df"/>
+  <text x="40" y="80" fill="#102a27" font-family="Arial" font-size="28">Comprobante de domicilio</text>
+  <text x="40" y="140" fill="#5b6f6c" font-family="Arial" font-size="18">Calle Francisco Sosa 123</text>
+  <text x="40" y="180" fill="#5b6f6c" font-family="Arial" font-size="18">Villa Coyoacán, CDMX</text>
+  <rect x="40" y="240" width="520" height="12" fill="#ccfbf1"/>
+  <rect x="40" y="280" width="420" height="12" fill="#eef5f3"/>
+  <rect x="40" y="320" width="480" height="12" fill="#eef5f3"/>
+</svg>

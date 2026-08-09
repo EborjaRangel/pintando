@@ -1,0 +1,64 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  USER
+  AUTORIZACION
+  ADMIN
+}
+
+model User {
+  id               String   @id @default(cuid())
+  name             String
+  email            String   @unique
+  password         String
+  role             Role     @default(USER)
+  active           Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  houses           House[]  @relation("HouseCreatedBy")
+  housesAuthorized House[]  @relation("HouseAuthorizedBy")
+}
+
+model House {
+  id                 String    @id @default(cuid())
+  folio              Int       @unique @default(autoincrement())
+  address            String
+  colonia            String
+  latitude           Float
+  longitude          Float
+  comprobanteUrl     String?
+  expedienteCompleto Boolean   @default(false)
+  autorizado         Boolean   @default(false)
+  autorizadoAt       DateTime?
+  notes              String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  createdById        String
+  createdBy          User      @relation("HouseCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
+  autorizadoById     String?
+  autorizadoBy       User?     @relation("HouseAuthorizedBy", fields: [autorizadoById], references: [id], onDelete: SetNull)
+  photos             Photo[]
+
+  @@index([colonia])
+  @@index([createdById])
+  @@index([folio])
+  @@index([autorizado])
+}
+
+model Photo {
+  id        String   @id @default(cuid())
+  url       String
+  slot      Int
+  houseId   String
+  house     House    @relation(fields: [houseId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([houseId, slot])
+  @@index([houseId])
+}

@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600">
+  <rect width="800" height="600" fill="#d1fae5"/>
+  <circle cx="400" cy="260" r="120" fill="#0d9488"/>
+  <rect x="200" y="360" width="400" height="80" fill="#115e59"/>
+  <text x="400" y="520" text-anchor="middle" fill="#134e4a" font-family="Arial" font-size="28">Foto 3 · Contexto</text>
+</svg>
