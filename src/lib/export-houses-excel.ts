@@ -2,8 +2,27 @@ import ExcelJS from "exceljs";
 import { readFile } from "fs/promises";
 import path from "path";
 import sharp from "sharp";
+import { fixExcelDrawingExtents } from "@/lib/fix-excel-drawings";
 import { getHouseStatus, getStatusLabel } from "@/lib/house-status";
 import { formatFolio } from "@/lib/folio";
+
+const IMAGE_WIDTH_PX = 120;
+const IMAGE_HEIGHT_PX = 90;
+
+function publicBaseUrl(): string {
+  const fromAuth = process.env.NEXTAUTH_URL?.trim();
+  if (fromAuth) return fromAuth.replace(/\/$/, "");
+  const vercel = process.env.VERCEL_URL?.trim();
+  if (vercel) return `https://${vercel.replace(/^https?:\/\//, "")}`;
+  return "";
+}
+
+function toAbsoluteMediaUrl(url: string): string {
+  if (/^https?:\/\//i.test(url)) return url;
+  const base = publicBaseUrl();
+  if (!base) return url;
+  return `${base}${url.startsWith("/") ? url : `/${url}`}`;
+}
 
 export type HouseExportRow = {
   id: string;
@@ -160,15 +179,21 @@ export async function buildHousesExcel(houses: HouseExportRow[]): Promise<Buffer
         continue;
       }
 
-      imageLabels[slot.key] = "";
+      // Texto + enlace: en móvil, si la miniatura no pinta, se puede abrir la foto
+      imageLabels[slot.key] = "Ver foto";
       const imageId = workbook.addImage({
         buffer: image.buffer as unknown as ExcelJS.Buffer,
         extension: image.extension,
       });
+      const abs = toAbsoluteMediaUrl(slot.url);
       sheet.addImage(imageId, {
         tl: { col: slot.col - 1, row: rowIndex - 1 },
-        ext: { width: 120, height: 90 },
+        ext: { width: IMAGE_WIDTH_PX, height: IMAGE_HEIGHT_PX },
         editAs: "oneCell",
+        hyperlinks: {
+          hyperlink: abs,
+          tooltip: abs,
+        },
       });
     }
 
@@ -195,6 +220,18 @@ export async function buildHousesExcel(houses: HouseExportRow[]): Promise<Buffer
     };
     row.height = 96;
     row.alignment = { vertical: "middle", wrapText: true };
+
+    // Hipervínculos en celdas de foto (útil en Excel/Files del celular)
+    for (const slot of imageSlots) {
+      if (!slot.url || /\.pdf(\?|$)/i.test(slot.url)) continue;
+      if (imageLabels[slot.key] !== "Ver foto") continue;
+      const cell = row.getCell(slot.col);
+      cell.value = {
+        text: "Ver foto",
+        hyperlink: toAbsoluteMediaUrl(slot.url),
+      };
+      cell.font = { color: { argb: "FF0563C1" }, underline: true };
+    }
   }
 
   const resumen = workbook.addWorksheet("Resumen");
@@ -212,6 +249,7 @@ export async function buildHousesExcel(houses: HouseExportRow[]): Promise<Buffer
   });
   resumen.getRow(1).font = { bold: true };
 
-  const buffer = await workbook.xlsx.writeBuffer();
-  return Buffer.from(buffer);
+  const buffer = Buffer.from(await workbook.xlsx.writeBuffer());
+  // Parchea dimensiones en drawing XML para que iOS/Android muestren las fotos
+  return fixExcelDrawingExtents(buffer, IMAGE_WIDTH_PX, IMAGE_HEIGHT_PX);
 }

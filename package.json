@@ -34,6 +34,7 @@
     "exceljs": "^4.4.0",
     "formik": "^2.4.9",
     "jose": "^6.2.8",
+    "jszip": "^3.10.1",
     "leaflet": "^1.9.4",
     "mapbox-gl": "^3.28.1",
     "maplibre-gl": "^6.2.0",

@@ -35,12 +35,37 @@ export function ExportExcelButton({
       }
 
       const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
       const disposition = res.headers.get("Content-Disposition") || "";
       const match = disposition.match(/filename="(.+)"/);
+      const filename = match?.[1] || "pintando-casas.xlsx";
+      const file = new File([blob], filename, {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+
+      // En celular, ofrecer compartir/guardar (el preview de Files a veces oculta fotos)
+      const isCoarsePointer =
+        typeof window !== "undefined" &&
+        window.matchMedia?.("(pointer: coarse)").matches;
+      const nav = navigator as Navigator & {
+        canShare?: (data?: ShareData) => boolean;
+        share?: (data?: ShareData) => Promise<void>;
+      };
+      if (
+        isCoarsePointer &&
+        typeof nav.share === "function" &&
+        nav.canShare?.({ files: [file] })
+      ) {
+        await nav.share({
+          files: [file],
+          title: filename,
+        });
+        return;
+      }
+
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
       a.href = url;
-      a.download = match?.[1] || "pintando-casas.xlsx";
+      a.download = filename;
       document.body.appendChild(a);
       a.click();
       a.remove();
