@@ -86,10 +86,10 @@ export default function LoginPage() {
           )}
         </Formik>
         <div className="mt-4 rounded-lg bg-[var(--wa-panel)] px-3 py-2 text-xs leading-relaxed text-[var(--muted)]">
-          <p className="font-medium text-[var(--wa-dark)]">Cuentas demo (correo completo):</p>
-          <p>admin@pintura.local · admin123</p>
-          <p>usuario@pintura.local · usuario123</p>
-          <p>autorizacion@pintura.local · autoriza123</p>
+          <p className="font-medium text-[var(--wa-dark)]">Cuentas (correo completo). Contraseña actual:</p>
+          <p className="font-mono text-[var(--wa-dark)]">Pintando2026!</p>
+          <p className="mt-1">admin@pintura.local · usuario@pintura.local · autorizacion@pintura.local</p>
+          <p>edgabart@gmail.com · jack@pintura.local</p>
         </div>
         <p className="mt-4 text-center text-sm text-[var(--muted)]">
           ¿Sin cuenta?{" "}

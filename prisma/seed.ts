@@ -7,7 +7,9 @@ const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! });
 const prisma = new PrismaClient({ adapter });
 
 async function main() {
-  const password = await bcrypt.hash("admin123", 10);
+  // Misma contraseña de producción para cuentas demo (Railway + Vercel comparten BD)
+  const sharedPassword = "Pintando2026!";
+  const password = await bcrypt.hash(sharedPassword, 10);
 
   const admin = await prisma.user.upsert({
     where: { email: "admin@pintura.local" },
@@ -20,26 +22,24 @@ async function main() {
     },
   });
 
-  const userPassword = await bcrypt.hash("usuario123", 10);
   const user = await prisma.user.upsert({
     where: { email: "usuario@pintura.local" },
-    update: { password: userPassword, role: "USER", active: true },
+    update: { password, role: "USER", active: true },
     create: {
       name: "Capturista Demo",
       email: "usuario@pintura.local",
-      password: userPassword,
+      password,
       role: "USER",
     },
   });
 
-  const authPassword = await bcrypt.hash("autoriza123", 10);
   await prisma.user.upsert({
     where: { email: "autorizacion@pintura.local" },
-    update: { password: authPassword, role: "AUTORIZACION", active: true },
+    update: { password, role: "AUTORIZACION", active: true },
     create: {
       name: "Autorizador Demo",
       email: "autorizacion@pintura.local",
-      password: authPassword,
+      password,
       role: "AUTORIZACION",
     },
   });
@@ -83,10 +83,9 @@ async function main() {
     });
   }
 
-  console.log("Seed listo:");
-  console.log("  Admin:         admin@pintura.local / admin123");
-  console.log("  Autorización:  autorizacion@pintura.local / autoriza123");
-  console.log("  Usuario:       usuario@pintura.local / usuario123");
+  console.log("Seed listo (contraseña compartida):");
+  console.log(`  ${sharedPassword}`);
+  console.log("  admin@pintura.local | usuario@pintura.local | autorizacion@pintura.local");
 }
 
 main()
