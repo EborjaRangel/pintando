@@ -2,7 +2,11 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/api";
 import { canAuthorizeHouses } from "@/lib/roles";
-import { getHouseStatus } from "@/lib/house-status";
+import {
+  getAuthorizationBlockers,
+  getHouseStatus,
+  isReadyForAuthorization,
+} from "@/lib/house-status";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -26,9 +30,24 @@ export async function PATCH(request: Request, { params }: Params) {
     return NextResponse.json({ error: "Indica autorizado true/false" }, { status: 400 });
   }
 
-  const house = await prisma.house.findUnique({ where: { id } });
+  const house = await prisma.house.findUnique({
+    where: { id },
+    include: { photos: { select: { slot: true } } },
+  });
   if (!house) {
     return NextResponse.json({ error: "Casa no encontrada" }, { status: 404 });
+  }
+
+  // Autorizar solo si el expediente está completo (fotos + comprobante + marcado).
+  // Quitar autorización siempre está permitido.
+  if (body.autorizado && !isReadyForAuthorization(house)) {
+    const missing = getAuthorizationBlockers(house);
+    return NextResponse.json(
+      {
+        error: `No se puede autorizar: falta ${missing.join(", ")}.`,
+      },
+      { status: 400 }
+    );
   }
 
   const updated = await prisma.house.update({

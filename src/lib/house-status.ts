@@ -7,15 +7,25 @@ export type HouseStatusInput = {
 export type CompletenessStatus = "complete" | "incomplete";
 
 export function getHouseStatus(house: HouseStatusInput): CompletenessStatus {
+  return isReadyForAuthorization(house) ? "complete" : "incomplete";
+}
+
+/** Requisitos faltantes para poder autorizar una casa. */
+export function getAuthorizationBlockers(house: HouseStatusInput): string[] {
   const slots = new Set(house.photos.map((p) => p.slot));
   const hasThreePhotos = [1, 2, 3].every((slot) => slots.has(slot));
-  const hasComprobante = Boolean(house.comprobanteUrl);
+  const blockers: string[] = [];
 
-  if (hasThreePhotos && hasComprobante && house.expedienteCompleto) {
-    return "complete";
-  }
+  if (!hasThreePhotos) blockers.push("las 3 fotografías");
+  if (!house.comprobanteUrl) blockers.push("el comprobante de domicilio");
+  if (!house.expedienteCompleto) blockers.push("expediente completo marcado");
 
-  return "incomplete";
+  return blockers;
+}
+
+/** Solo se puede autorizar con 3 fotos + comprobante + expediente completo. */
+export function isReadyForAuthorization(house: HouseStatusInput): boolean {
+  return getAuthorizationBlockers(house).length === 0;
 }
 
 export const MAP_COLOR_AUTHORIZED = "#2563EB";

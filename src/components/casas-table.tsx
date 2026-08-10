@@ -5,7 +5,10 @@ import { useMemo, useState } from "react";
 import { StatusBadge } from "@/components/status-badge";
 import { ExportExcelButton } from "@/components/export-excel-button";
 import { AuthorizeHouseButton } from "@/components/authorize-house-button";
-import type { CompletenessStatus } from "@/lib/house-status";
+import {
+  getAuthorizationBlockers,
+  type CompletenessStatus,
+} from "@/lib/house-status";
 import { formatFolio } from "@/lib/folio";
 
 export type CasaRow = {
@@ -16,11 +19,25 @@ export type CasaRow = {
   colorName?: string | null;
   colorHexes?: string[];
   photosCount: number;
+  photoSlots?: number[];
   hasComprobante: boolean;
+  expedienteCompleto?: boolean;
   status: CompletenessStatus;
   autorizado: boolean;
   capturista?: string;
 };
+
+function authProps(house: CasaRow) {
+  const ready = house.status === "complete";
+  const blockers = ready
+    ? []
+    : getAuthorizationBlockers({
+        photos: (house.photoSlots ?? []).map((slot) => ({ slot })),
+        comprobanteUrl: house.hasComprobante ? "yes" : null,
+        expedienteCompleto: Boolean(house.expedienteCompleto),
+      });
+  return { ready, blockers };
+}
 
 function ColorSwatches({
   houseId,
@@ -161,7 +178,11 @@ export function CasasTable({
                   <p className="text-xs text-[var(--muted)]">Capturista: {house.capturista}</p>
                 )}
                 {canAuthorize && (
-                  <AuthorizeHouseButton houseId={house.id} autorizado={house.autorizado} />
+                  <AuthorizeHouseButton
+                    houseId={house.id}
+                    autorizado={house.autorizado}
+                    {...authProps(house)}
+                  />
                 )}
                 <Link href={`/casas/${house.id}`} className="btn-secondary mt-1 w-full">
                   Abrir
@@ -237,7 +258,11 @@ export function CasasTable({
                 </td>
                 <td className="px-4 py-3">
                   {canAuthorize ? (
-                    <AuthorizeHouseButton houseId={house.id} autorizado={house.autorizado} />
+                    <AuthorizeHouseButton
+                      houseId={house.id}
+                      autorizado={house.autorizado}
+                      {...authProps(house)}
+                    />
                   ) : house.autorizado ? (
                     <span className="text-[var(--wa-teal)]">Autorizada</span>
                   ) : (

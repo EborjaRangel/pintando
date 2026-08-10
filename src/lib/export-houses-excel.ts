@@ -1,6 +1,7 @@
 import ExcelJS from "exceljs";
 import { readFile } from "fs/promises";
 import path from "path";
+import sharp from "sharp";
 import { getHouseStatus, getStatusLabel } from "@/lib/house-status";
 import { formatFolio } from "@/lib/folio";
 
@@ -20,37 +21,51 @@ export type HouseExportRow = {
   photos: { slot: number; url: string }[];
 };
 
-function extensionFromName(name: string): "png" | "jpeg" | "gif" | null {
-  const clean = name.split("?")[0].toLowerCase();
-  const ext = path.extname(clean);
-  if (ext === ".png") return "png";
-  if (ext === ".jpg" || ext === ".jpeg") return "jpeg";
-  if (ext === ".gif") return "gif";
-  // webp/svg no embeben bien en ExcelJS
-  return null;
+function looksLikePdf(buffer: Buffer, contentType?: string | null, url?: string): boolean {
+  if (contentType?.includes("pdf")) return true;
+  if (url && /\.pdf(\?|$)/i.test(url)) return true;
+  return buffer.length >= 4 && buffer.subarray(0, 4).toString("ascii") === "%PDF";
 }
 
+/**
+ * Descarga (o lee) cualquier imagen y la convierte a JPEG embebible en Excel.
+ * WebP/HEIC/PNG grandes suelen fallar si se pasan “crudos” a ExcelJS.
+ */
 async function tryReadImage(
   url: string | null | undefined
-): Promise<{ buffer: Buffer; extension: "png" | "jpeg" | "gif" } | null> {
+): Promise<{ buffer: Buffer; extension: "jpeg" } | null> {
   if (!url) return null;
 
   try {
+    let raw: Buffer;
+    let contentType: string | null = null;
+
     if (url.startsWith("http://") || url.startsWith("https://")) {
-      const extension = extensionFromName(url);
-      if (!extension) return null;
-      const res = await fetch(url);
+      const res = await fetch(url, { redirect: "follow" });
       if (!res.ok) return null;
-      const buffer = Buffer.from(await res.arrayBuffer());
-      return { buffer, extension };
+      contentType = res.headers.get("content-type");
+      raw = Buffer.from(await res.arrayBuffer());
+    } else {
+      const relative = url.replace(/^\//, "");
+      const filePath = path.join(process.cwd(), "public", relative);
+      raw = await readFile(filePath);
     }
 
-    const relative = url.replace(/^\//, "");
-    const filePath = path.join(process.cwd(), "public", relative);
-    const extension = extensionFromName(filePath);
-    if (!extension) return null;
-    const buffer = await readFile(filePath);
-    return { buffer, extension };
+    if (!raw.length) return null;
+    if (looksLikePdf(raw, contentType, url)) return null;
+
+    const jpeg = await sharp(raw)
+      .rotate()
+      .resize({
+        width: 900,
+        height: 900,
+        fit: "inside",
+        withoutEnlargement: true,
+      })
+      .jpeg({ quality: 82, mozjpeg: true })
+      .toBuffer();
+
+    return { buffer: jpeg, extension: "jpeg" };
   } catch {
     return null;
   }
@@ -106,6 +121,57 @@ export async function buildHousesExcel(houses: HouseExportRow[]): Promise<Buffer
 
     const rowIndex = i + 2;
     const row = sheet.getRow(rowIndex);
+
+    // Columnas de imagen: Foto1=16, Foto2=17, Foto3=18, Comprobante=19 (1-based)
+    const imageSlots: Array<{
+      url: string | null;
+      col: number;
+      key: "foto1" | "foto2" | "foto3" | "comprobanteImg";
+      empty: string;
+      pdfLabel: string;
+    }> = [
+      { url: photosBySlot[0], col: 16, key: "foto1", empty: "Sin foto", pdfLabel: "PDF" },
+      { url: photosBySlot[1], col: 17, key: "foto2", empty: "Sin foto", pdfLabel: "PDF" },
+      { url: photosBySlot[2], col: 18, key: "foto3", empty: "Sin foto", pdfLabel: "PDF" },
+      {
+        url: house.comprobanteUrl,
+        col: 19,
+        key: "comprobanteImg",
+        empty: "Sin comprobante",
+        pdfLabel: "Ver PDF (enlace en app)",
+      },
+    ];
+
+    const imageLabels: Record<string, string> = {};
+
+    for (const slot of imageSlots) {
+      if (!slot.url) {
+        imageLabels[slot.key] = slot.empty;
+        continue;
+      }
+      if (/\.pdf(\?|$)/i.test(slot.url)) {
+        imageLabels[slot.key] = slot.pdfLabel;
+        continue;
+      }
+
+      const image = await tryReadImage(slot.url);
+      if (!image) {
+        imageLabels[slot.key] = "No se pudo cargar";
+        continue;
+      }
+
+      imageLabels[slot.key] = "";
+      const imageId = workbook.addImage({
+        buffer: image.buffer as unknown as ExcelJS.Buffer,
+        extension: image.extension,
+      });
+      sheet.addImage(imageId, {
+        tl: { col: slot.col - 1, row: rowIndex - 1 },
+        ext: { width: 120, height: 90 },
+        editAs: "oneCell",
+      });
+    }
+
     row.values = {
       folio: formatFolio(house.folio),
       id: house.id,
@@ -122,35 +188,13 @@ export async function buildHousesExcel(houses: HouseExportRow[]): Promise<Buffer
       capturista: house.createdBy.name,
       email: house.createdBy.email,
       fecha: house.createdAt.toLocaleString("es-MX"),
-      foto1: photosBySlot[0] ? "Ver imagen" : "Sin foto",
-      foto2: photosBySlot[1] ? "Ver imagen" : "Sin foto",
-      foto3: photosBySlot[2] ? "Ver imagen" : "Sin foto",
-      comprobanteImg: house.comprobanteUrl ? "Ver archivo" : "Sin comprobante",
+      foto1: imageLabels.foto1,
+      foto2: imageLabels.foto2,
+      foto3: imageLabels.foto3,
+      comprobanteImg: imageLabels.comprobanteImg,
     };
-    row.height = 90;
+    row.height = 96;
     row.alignment = { vertical: "middle", wrapText: true };
-
-    // Columnas de imagen: Foto1=16, Foto2=17, Foto3=18, Comprobante=19 (1-based)
-    const imageSlots: Array<{ url: string | null; col: number }> = [
-      { url: photosBySlot[0], col: 16 },
-      { url: photosBySlot[1], col: 17 },
-      { url: photosBySlot[2], col: 18 },
-      { url: house.comprobanteUrl, col: 19 },
-    ];
-
-    for (const slot of imageSlots) {
-      const image = await tryReadImage(slot.url);
-      if (!image) continue;
-      const imageId = workbook.addImage({
-        buffer: image.buffer as unknown as ExcelJS.Buffer,
-        extension: image.extension,
-      });
-      sheet.addImage(imageId, {
-        tl: { col: slot.col - 1, row: rowIndex - 1 },
-        ext: { width: 110, height: 80 },
-        editAs: "oneCell",
-      });
-    }
   }
 
   const resumen = workbook.addWorksheet("Resumen");

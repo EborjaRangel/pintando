@@ -6,6 +6,8 @@ import { canExportExcel } from "@/lib/roles";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+/** Conversión de fotos a JPEG + Excel puede tardar con varios registros. */
+export const maxDuration = 60;
 
 export async function GET(request: Request) {
   const { session, error } = await requireSession();

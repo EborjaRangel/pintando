@@ -40,7 +40,9 @@ export default async function CasasPage() {
         : house.notes,
       colorHexes: colors.map((c) => c.hex),
       photosCount: house.photos.length,
+      photoSlots: house.photos.map((p) => p.slot),
       hasComprobante: Boolean(house.comprobanteUrl),
+      expedienteCompleto: house.expedienteCompleto,
       status: getHouseStatus(house),
       autorizado: house.autorizado,
       capturista: house.createdBy.name,
@@ -58,7 +60,7 @@ export default async function CasasPage() {
           <h1 className="section-title text-2xl sm:text-3xl">Casas</h1>
           <p className="mt-1 text-sm text-[var(--muted)]">
             {showAll
-              ? `Todos los registros · rol ${roleLabel(role)}. Marca Autorizar para aprobar.`
+              ? `Todos los registros · rol ${roleLabel(role)}. Solo se autoriza con 3 fotos, comprobante y expediente completo.`
               : "Solo ves las casas autorizadas que tú levantaste. Al crear una nueva puedes completar fotos en el expediente."}
           </p>
         </div>

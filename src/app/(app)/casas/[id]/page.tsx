@@ -3,7 +3,11 @@ import { notFound, redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { getHouseStatus } from "@/lib/house-status";
+import {
+  getAuthorizationBlockers,
+  getHouseStatus,
+  isReadyForAuthorization,
+} from "@/lib/house-status";
 import { StatusBadge } from "@/components/status-badge";
 import { HouseUploads } from "@/components/house-uploads";
 import { HouseForm } from "@/components/house-form";
@@ -94,7 +98,12 @@ export default async function CasaDetallePage({ params }: Props) {
           <p className="break-words">Capturista: {house.createdBy.name}</p>
           {canAuthorize && (
             <div className="sm:flex sm:justify-end">
-              <AuthorizeHouseButton houseId={house.id} autorizado={house.autorizado} />
+              <AuthorizeHouseButton
+                houseId={house.id}
+                autorizado={house.autorizado}
+                ready={isReadyForAuthorization(house)}
+                blockers={getAuthorizationBlockers(house)}
+              />
             </div>
           )}
         </div>
