@@ -11,7 +11,7 @@ async function main() {
 
   const admin = await prisma.user.upsert({
     where: { email: "admin@pintura.local" },
-    update: {},
+    update: { password, role: "ADMIN", active: true },
     create: {
       name: "Administrador",
       email: "admin@pintura.local",
@@ -23,7 +23,7 @@ async function main() {
   const userPassword = await bcrypt.hash("usuario123", 10);
   const user = await prisma.user.upsert({
     where: { email: "usuario@pintura.local" },
-    update: {},
+    update: { password: userPassword, role: "USER", active: true },
     create: {
       name: "Capturista Demo",
       email: "usuario@pintura.local",
@@ -35,7 +35,7 @@ async function main() {
   const authPassword = await bcrypt.hash("autoriza123", 10);
   await prisma.user.upsert({
     where: { email: "autorizacion@pintura.local" },
-    update: { role: "AUTORIZACION" },
+    update: { password: authPassword, role: "AUTORIZACION", active: true },
     create: {
       name: "Autorizador Demo",
       email: "autorizacion@pintura.local",

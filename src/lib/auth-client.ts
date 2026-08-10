@@ -57,15 +57,10 @@ export function readAuthLocalState(): AuthLocalSnapshot {
 }
 
 /**
- * Limpia estado local y cierra cualquier sesión previa en el navegador
- * antes de iniciar una nueva (evita permisos residuales).
+ * Limpia estado local antes de un login nuevo.
+ * No llama a signOut aquí: en algunos navegadores invalida el CSRF
+ * y el siguiente signIn falla aunque la contraseña sea correcta.
  */
 export async function prepareFreshLogin(): Promise<void> {
   clearAuthLocalState();
-  try {
-    const { signOut } = await import("next-auth/react");
-    await signOut({ redirect: false });
-  } catch {
-    // sin sesión previa
-  }
 }

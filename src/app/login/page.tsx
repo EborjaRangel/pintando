@@ -64,12 +64,18 @@ export default function LoginPage() {
             <Form className="space-y-4">
               <label className="block space-y-1">
                 <span className="label">Correo</span>
-                <Field name="email" type="email" className="field" placeholder="tu@correo.com" />
+                <Field
+                  name="email"
+                  type="email"
+                  className="field"
+                  placeholder="admin@pintura.local"
+                  autoComplete="username"
+                />
                 <ErrorMessage name="email" component="p" className="error" />
               </label>
               <label className="block space-y-1">
                 <span className="label">Contraseña</span>
-                <Field name="password" type="password" className="field" />
+                <Field name="password" type="password" className="field" autoComplete="current-password" />
                 <ErrorMessage name="password" component="p" className="error" />
               </label>
               {error && <p className="error">{error}</p>}
@@ -79,6 +85,12 @@ export default function LoginPage() {
             </Form>
           )}
         </Formik>
+        <div className="mt-4 rounded-lg bg-[var(--wa-panel)] px-3 py-2 text-xs leading-relaxed text-[var(--muted)]">
+          <p className="font-medium text-[var(--wa-dark)]">Cuentas demo (correo completo):</p>
+          <p>admin@pintura.local · admin123</p>
+          <p>usuario@pintura.local · usuario123</p>
+          <p>autorizacion@pintura.local · autoriza123</p>
+        </div>
         <p className="mt-4 text-center text-sm text-[var(--muted)]">
           ¿Sin cuenta?{" "}
           <Link href="/register" className="font-medium text-[var(--wa-teal)] underline">
