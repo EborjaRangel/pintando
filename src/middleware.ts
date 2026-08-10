@@ -1,5 +1,6 @@
 import { withAuth } from "next-auth/middleware";
 import { NextResponse } from "next/server";
+import { SESSION_COOKIE_NAME } from "@/lib/auth-cookie";
 
 export default withAuth(
   function middleware(req) {
@@ -22,6 +23,15 @@ export default withAuth(
     return NextResponse.next();
   },
   {
+    pages: {
+      signIn: "/login",
+    },
+    // Debe coincidir con authOptions.cookies.sessionToken.name
+    cookies: {
+      sessionToken: {
+        name: SESSION_COOKIE_NAME,
+      },
+    },
     callbacks: {
       authorized: ({ token }) => Boolean(token) && token?.error !== "AccessDenied",
     },

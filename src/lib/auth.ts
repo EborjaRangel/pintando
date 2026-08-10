@@ -1,10 +1,10 @@
 import type { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
+import { SESSION_COOKIE_NAME, sessionCookieOptions } from "@/lib/auth-cookie";
 import { prisma } from "@/lib/prisma";
 import type { AppRole } from "@/lib/roles";
 
-const isProd = process.env.NODE_ENV === "production";
 /** Revalidar rol/activo desde BD (evita permisos viejos en el JWT). */
 const ROLE_REVALIDATE_MS = 30_000;
 
@@ -20,13 +20,8 @@ export const authOptions: NextAuthOptions = {
   // Cookie propia del proyecto: no se mezcla con otras apps NextAuth en el mismo dominio
   cookies: {
     sessionToken: {
-      name: isProd ? "__Secure-pintando.session-token" : "pintando.session-token",
-      options: {
-        httpOnly: true,
-        sameSite: "lax",
-        path: "/",
-        secure: isProd,
-      },
+      name: SESSION_COOKIE_NAME,
+      options: sessionCookieOptions,
     },
   },
   providers: [
