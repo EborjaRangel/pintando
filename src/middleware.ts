@@ -23,7 +23,7 @@ export default withAuth(
   },
   {
     callbacks: {
-      authorized: ({ token }) => Boolean(token) && token.error !== "AccessDenied",
+      authorized: ({ token }) => Boolean(token) && token?.error !== "AccessDenied",
     },
   }
 );
