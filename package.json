@@ -7,7 +7,7 @@
     "dev:next": "next dev",
     "dev:db": "prisma dev --name default",
     "build": "prisma generate && prisma db push && next build",
-    "start": "next start",
+    "start": "next start --hostname 0.0.0.0",
     "lint": "eslint",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
