@@ -14,7 +14,7 @@ import { HouseForm } from "@/components/house-form";
 import { getColorsFromNotes, PALETA_COLORES, serializeColors } from "@/lib/paleta-colores";
 import { formatFolio } from "@/lib/folio";
 import { canAccessHouse } from "@/lib/house-access";
-import { canAuthorizeHouses } from "@/lib/roles";
+import { canAuthorizeHouses, canRevokeAuthorization } from "@/lib/roles";
 import { AuthorizeHouseButton } from "@/components/authorize-house-button";
 
 type Props = { params: Promise<{ id: string }> };
@@ -46,7 +46,10 @@ export default async function CasaDetallePage({ params }: Props) {
 
   const status = getHouseStatus(house);
   const colors = getColorsFromNotes(house.notes);
-  const canAuthorize = canAuthorizeHouses(session!.user.role);
+  const role = session!.user.role;
+  const canAuthorize = canAuthorizeHouses(role);
+  const canRevoke = canRevokeAuthorization(role);
+  const showAuthControl = canAuthorize || (canRevoke && house.autorizado);
 
   return (
     <div className="space-y-8">
@@ -96,13 +99,15 @@ export default async function CasaDetallePage({ params }: Props) {
         </div>
         <div className="w-full shrink-0 space-y-2 text-sm text-[var(--muted)] sm:w-auto sm:text-right">
           <p className="break-words">Capturista: {house.createdBy.name}</p>
-          {canAuthorize && (
+          {showAuthControl && (
             <div className="sm:flex sm:justify-end">
               <AuthorizeHouseButton
                 houseId={house.id}
                 autorizado={house.autorizado}
                 ready={isReadyForAuthorization(house)}
                 blockers={getAuthorizationBlockers(house)}
+                canAuthorize={canAuthorize}
+                canRevoke={canRevoke}
               />
             </div>
           )}

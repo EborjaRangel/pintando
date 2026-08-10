@@ -6,7 +6,11 @@ import { getHouseStatus } from "@/lib/house-status";
 import { getColorsFromNotes } from "@/lib/paleta-colores";
 import { CasasTable } from "@/components/casas-table";
 import { autorizadosWhereForRole } from "@/lib/house-access";
-import { canAuthorizeHouses, canSeeAllHouses } from "@/lib/roles";
+import {
+  canAuthorizeHouses,
+  canRevokeAuthorization,
+  canSeeAllHouses,
+} from "@/lib/roles";
 
 export default async function AutorizadosPage() {
   const session = await getServerSession(authOptions);
@@ -73,6 +77,7 @@ export default async function AutorizadosPage() {
           houses={rows}
           showCapturista={showAll}
           canAuthorize={canAuthorizeHouses(role)}
+          canRevoke={canRevokeAuthorization(role)}
         />
       )}
     </div>

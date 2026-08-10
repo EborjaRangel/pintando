@@ -20,9 +20,14 @@ export function canSeeAllHouses(role: AppRole | string): boolean {
   return role === "ADMIN" || role === "AUTORIZACION";
 }
 
-/** Solo Autorización marca/desmarca casas como autorizadas. */
+/** Solo Autorización puede marcar casas como autorizadas. */
 export function canAuthorizeHouses(role: AppRole | string): boolean {
   return role === "AUTORIZACION";
+}
+
+/** Solo Admin puede quitar la autorización (después de autorizar / Excel). */
+export function canRevokeAuthorization(role: AppRole | string): boolean {
+  return role === "ADMIN";
 }
 
 /** Solo Autorización exporta a Excel (únicamente casas autorizadas). */

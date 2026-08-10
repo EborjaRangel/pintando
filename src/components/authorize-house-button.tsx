@@ -8,29 +8,38 @@ export function AuthorizeHouseButton({
   autorizado,
   ready = false,
   blockers = [],
+  canAuthorize = true,
+  canRevoke = false,
 }: {
   houseId: string;
   autorizado: boolean;
   /** true si hay 3 fotos + comprobante + expediente completo */
   ready?: boolean;
   blockers?: string[];
+  /** Rol Autorización: puede marcar como autorizada */
+  canAuthorize?: boolean;
+  /** Solo Admin: puede quitar la autorización */
+  canRevoke?: boolean;
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const canToggleOn = ready || autorizado;
-  const disabled = busy || (!autorizado && !ready);
+  const canTurnOn = !autorizado && canAuthorize && ready;
+  const canTurnOff = autorizado && canRevoke;
+  const interactive = canTurnOn || canTurnOff;
+  const disabled = busy || !interactive;
 
   async function toggle() {
-    if (!autorizado && !ready) return;
+    if (!interactive) return;
+    const next = !autorizado;
     setBusy(true);
     setError(null);
     try {
       const res = await fetch(`/api/houses/${houseId}/autorizar`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ autorizado: !autorizado }),
+        body: JSON.stringify({ autorizado: next }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "No se pudo actualizar");
@@ -49,9 +58,11 @@ export function AuthorizeHouseButton({
           disabled ? "cursor-not-allowed opacity-60" : "cursor-pointer"
         }`}
         title={
-          !canToggleOn && blockers.length
-            ? `Para autorizar se necesita: ${blockers.join(", ")}`
-            : undefined
+          autorizado && !canRevoke
+            ? "Solo el administrador puede quitar la autorización"
+            : !autorizado && !ready && blockers.length
+              ? `Para autorizar se necesita: ${blockers.join(", ")}`
+              : undefined
         }
       >
         <input
@@ -65,9 +76,14 @@ export function AuthorizeHouseButton({
           {autorizado ? "Autorizada" : "Autorizar"}
         </span>
       </label>
-      {!autorizado && !ready && (
+      {!autorizado && canAuthorize && !ready && (
         <p className="max-w-[16rem] text-xs text-[var(--muted)]">
           Requiere: {blockers.length ? blockers.join(", ") : "expediente completo"}
+        </p>
+      )}
+      {autorizado && !canRevoke && (
+        <p className="max-w-[16rem] text-xs text-[var(--muted)]">
+          Solo el administrador puede quitar la autorización
         </p>
       )}
       {error && <p className="error text-xs">{error}</p>}

@@ -9,6 +9,7 @@ import { ExportExcelButton } from "@/components/export-excel-button";
 import { housesWhereForRole } from "@/lib/house-access";
 import {
   canAuthorizeHouses,
+  canRevokeAuthorization,
   canExportExcel,
   canSeeAllHouses,
   roleLabel,
@@ -52,6 +53,7 @@ export default async function CasasPage() {
   const showAll = canSeeAllHouses(role);
   const canExport = canExportExcel(role);
   const canAuthorize = canAuthorizeHouses(role);
+  const canRevoke = canRevokeAuthorization(role);
 
   return (
     <div className="space-y-6">
@@ -93,6 +95,7 @@ export default async function CasasPage() {
           houses={rows}
           showCapturista={showAll}
           canAuthorize={canAuthorize}
+          canRevoke={canRevoke}
           canExport={canExport}
         />
       )}

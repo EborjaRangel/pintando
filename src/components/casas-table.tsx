@@ -69,13 +69,20 @@ export function CasasTable({
   houses,
   showCapturista,
   canAuthorize = false,
+  canRevoke = false,
   canExport = false,
 }: {
   houses: CasaRow[];
   showCapturista: boolean;
   canAuthorize?: boolean;
+  canRevoke?: boolean;
   canExport?: boolean;
 }) {
+  function showAuthControl(house: CasaRow) {
+    if (canAuthorize) return true;
+    if (canRevoke && house.autorizado) return true;
+    return false;
+  }
   const [selected, setSelected] = useState<string[]>([]);
 
   const allSelected = houses.length > 0 && selected.length === houses.length;
@@ -177,10 +184,12 @@ export function CasasTable({
                 {showCapturista && house.capturista && (
                   <p className="text-xs text-[var(--muted)]">Capturista: {house.capturista}</p>
                 )}
-                {canAuthorize && (
+                {showAuthControl(house) && (
                   <AuthorizeHouseButton
                     houseId={house.id}
                     autorizado={house.autorizado}
+                    canAuthorize={canAuthorize}
+                    canRevoke={canRevoke}
                     {...authProps(house)}
                   />
                 )}
@@ -257,10 +266,12 @@ export function CasasTable({
                   <StatusBadge status={house.status} />
                 </td>
                 <td className="px-4 py-3">
-                  {canAuthorize ? (
+                  {showAuthControl(house) ? (
                     <AuthorizeHouseButton
                       houseId={house.id}
                       autorizado={house.autorizado}
+                      canAuthorize={canAuthorize}
+                      canRevoke={canRevoke}
                       {...authProps(house)}
                     />
                   ) : house.autorizado ? (

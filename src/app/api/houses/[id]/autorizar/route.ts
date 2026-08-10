@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/api";
-import { canAuthorizeHouses } from "@/lib/roles";
+import { canAuthorizeHouses, canRevokeAuthorization } from "@/lib/roles";
 import {
   getAuthorizationBlockers,
   getHouseStatus,
@@ -14,13 +14,7 @@ export async function PATCH(request: Request, { params }: Params) {
   const { session, error } = await requireSession();
   if (error) return error;
 
-  if (!canAuthorizeHouses(session!.user.role)) {
-    return NextResponse.json(
-      { error: "Solo el rol Autorización puede autorizar casas" },
-      { status: 403 }
-    );
-  }
-
+  const role = session!.user.role;
   const { id } = await params;
   const body = (await request.json().catch(() => null)) as {
     autorizado?: boolean;
@@ -38,16 +32,31 @@ export async function PATCH(request: Request, { params }: Params) {
     return NextResponse.json({ error: "Casa no encontrada" }, { status: 404 });
   }
 
-  // Autorizar solo si el expediente está completo (fotos + comprobante + marcado).
-  // Quitar autorización siempre está permitido.
-  if (body.autorizado && !isReadyForAuthorization(house)) {
-    const missing = getAuthorizationBlockers(house);
-    return NextResponse.json(
-      {
-        error: `No se puede autorizar: falta ${missing.join(", ")}.`,
-      },
-      { status: 400 }
-    );
+  if (body.autorizado) {
+    if (!canAuthorizeHouses(role)) {
+      return NextResponse.json(
+        { error: "Solo el rol Autorización puede autorizar casas" },
+        { status: 403 }
+      );
+    }
+    if (!isReadyForAuthorization(house)) {
+      const missing = getAuthorizationBlockers(house);
+      return NextResponse.json(
+        { error: `No se puede autorizar: falta ${missing.join(", ")}.` },
+        { status: 400 }
+      );
+    }
+  } else {
+    // Quitar autorización: solo Admin
+    if (!canRevokeAuthorization(role)) {
+      return NextResponse.json(
+        {
+          error:
+            "Solo el administrador puede quitar la autorización de un expediente",
+        },
+        { status: 403 }
+      );
+    }
   }
 
   const updated = await prisma.house.update({
