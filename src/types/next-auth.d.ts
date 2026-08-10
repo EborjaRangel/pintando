@@ -7,6 +7,8 @@ declare module "next-auth" {
       id: string;
       role: AppRole;
     } & DefaultSession["user"];
+    /** Presente si el usuario fue desactivado o el token ya no es válido */
+    error?: "AccessDenied";
   }
 
   interface User {
@@ -18,5 +20,7 @@ declare module "next-auth/jwt" {
   interface JWT {
     id?: string;
     role?: AppRole;
+    lastValidated?: number;
+    error?: "AccessDenied";
   }
 }

@@ -15,7 +15,7 @@ export function roleLabel(role: AppRole | string): string {
   }
 }
 
-/** Ve todos los registros (como admin operativo). */
+/** Solo Admin y Autorización ven casas de todos los capturistas. */
 export function canSeeAllHouses(role: AppRole | string): boolean {
   return role === "ADMIN" || role === "AUTORIZACION";
 }
@@ -30,9 +30,31 @@ export function canRevokeAuthorization(role: AppRole | string): boolean {
   return role === "ADMIN";
 }
 
-/** Solo Autorización exporta a Excel (únicamente casas autorizadas). */
-export function canExportExcel(role: AppRole | string): boolean {
+/** Autorización: Excel solo de casas autorizadas. */
+export function canExportAuthorizedExcel(role: AppRole | string): boolean {
   return role === "AUTORIZACION";
+}
+
+/** Usuario: Excel de seguimiento de todas sus casas (completas o no). */
+export function canExportTrackingExcel(role: AppRole | string): boolean {
+  return role === "USER";
+}
+
+/** Cualquier rol que pueda bajar Excel. */
+export function canExportExcel(role: AppRole | string): boolean {
+  return canExportAuthorizedExcel(role) || canExportTrackingExcel(role);
+}
+
+export type ExcelExportScope = "authorized" | "tracking";
+
+export function excelScopeForRole(role: AppRole | string): ExcelExportScope | null {
+  if (canExportAuthorizedExcel(role)) return "authorized";
+  if (canExportTrackingExcel(role)) return "tracking";
+  return null;
+}
+
+export function excelLabelForRole(role: AppRole | string): string {
+  return canExportTrackingExcel(role) ? "Excel seguimiento" : "Excel autorizadas";
 }
 
 export function isAdmin(role: AppRole | string): boolean {

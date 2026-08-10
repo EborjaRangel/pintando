@@ -5,7 +5,20 @@ import { usePathname } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 import { ExportExcelButton } from "@/components/export-excel-button";
-import { canExportExcel, isAdmin, roleLabel, type AppRole } from "@/lib/roles";
+import { clearAuthLocalState } from "@/lib/auth-client";
+import {
+  canExportExcel,
+  excelLabelForRole,
+  excelScopeForRole,
+  isAdmin,
+  roleLabel,
+  type AppRole,
+} from "@/lib/roles";
+
+async function handleSignOut() {
+  clearAuthLocalState();
+  await signOut({ callbackUrl: "/login" });
+}
 
 const links = [
   { href: "/dashboard", label: "Inicio" },
@@ -79,7 +92,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       )}
       {canExportExcel(role) && (
         <ExportExcelButton
-          label="Excel autorizadas"
+          scope={excelScopeForRole(role) ?? undefined}
+          label={excelLabelForRole(role)}
           className="inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-[var(--wa-green)] px-3 py-2.5 text-sm font-semibold text-[var(--wa-darker)] transition hover:brightness-105 disabled:opacity-60 lg:w-auto"
         />
       )}
@@ -106,7 +120,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </span>
             <button
               type="button"
-              onClick={() => signOut({ callbackUrl: "/login" })}
+              onClick={() => void handleSignOut()}
               className="hidden min-h-11 items-center rounded-lg border border-white/25 px-3 py-2.5 text-sm text-white transition hover:bg-white/10 lg:inline-flex"
             >
               Salir
@@ -154,7 +168,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               </p>
               <button
                 type="button"
-                onClick={() => signOut({ callbackUrl: "/login" })}
+                onClick={() => void handleSignOut()}
                 className="inline-flex min-h-11 w-full items-center justify-center rounded-lg border border-white/25 px-3 py-2.5 text-sm text-white transition hover:bg-white/10"
               >
                 Salir

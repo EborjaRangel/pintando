@@ -5,7 +5,13 @@ import { prisma } from "@/lib/prisma";
 import { getHouseStatus } from "@/lib/house-status";
 import { ExportExcelButton } from "@/components/export-excel-button";
 import { housesWhereForRole } from "@/lib/house-access";
-import { canExportExcel, isAdmin, roleLabel } from "@/lib/roles";
+import {
+  canExportExcel,
+  excelLabelForRole,
+  excelScopeForRole,
+  isAdmin,
+  roleLabel,
+} from "@/lib/roles";
 
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions);
@@ -34,7 +40,8 @@ export default async function DashboardPage() {
         </h1>
         <p className="max-w-2xl text-[var(--muted)]">
           Hola {session!.user.name} ({roleLabel(role)}). Registra casas con fotos, comprobante y
-          geolocalización. El rol Autorización aprueba expedientes y exporta a Excel.
+          geolocalización. El capturista solo ve y exporta lo que él levantó; Admin y Autorización
+          ven las de todos.
         </p>
       </section>
 
@@ -61,7 +68,8 @@ export default async function DashboardPage() {
         </Link>
         {canExport && (
           <ExportExcelButton
-            label="Excel autorizadas"
+            scope={excelScopeForRole(role) ?? undefined}
+            label={excelLabelForRole(role)}
             className="inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-[var(--wa-green)] px-4 py-2.5 text-sm font-semibold text-[var(--wa-darker)] transition hover:brightness-105 disabled:opacity-60 sm:w-auto"
           />
         )}

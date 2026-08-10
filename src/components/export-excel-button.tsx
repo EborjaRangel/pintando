@@ -1,17 +1,21 @@
 "use client";
 
 import { useState } from "react";
+import type { ExcelExportScope } from "@/lib/roles";
 
 type Props = {
   ids?: string[];
   label?: string;
   className?: string;
+  /** authorized = solo autorizadas; tracking = todas las del capturista */
+  scope?: ExcelExportScope;
 };
 
 export function ExportExcelButton({
   ids,
   label = "Bajar a Excel",
   className,
+  scope,
 }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -20,8 +24,11 @@ export function ExportExcelButton({
     setLoading(true);
     setError(null);
     try {
-      const params = ids?.length ? `?ids=${encodeURIComponent(ids.join(","))}` : "";
-      const res = await fetch(`/api/houses/export${params}`);
+      const params = new URLSearchParams();
+      if (scope) params.set("scope", scope);
+      if (ids?.length) params.set("ids", ids.join(","));
+      const qs = params.toString();
+      const res = await fetch(`/api/houses/export${qs ? `?${qs}` : ""}`);
       if (!res.ok) {
         const data = (await res.json().catch(() => null)) as { error?: string } | null;
         throw new Error(data?.error || "No se pudo generar el Excel");
@@ -55,7 +62,11 @@ export function ExportExcelButton({
           className ||
           "inline-flex min-h-11 items-center justify-center rounded-lg bg-[var(--wa-green)] px-4 py-2.5 text-sm font-semibold text-[var(--wa-darker)] transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-60"
         }
-        title="Descarga todos los registros con fotos en Excel"
+        title={
+          scope === "tracking"
+            ? "Descarga tu listado de seguimiento (todas tus casas)"
+            : "Descarga casas autorizadas con fotos en Excel"
+        }
       >
         {loading ? "Generando…" : label}
       </button>

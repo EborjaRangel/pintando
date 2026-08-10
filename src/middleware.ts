@@ -3,8 +3,13 @@ import { NextResponse } from "next/server";
 
 export default withAuth(
   function middleware(req) {
-    const role = req.nextauth.token?.role;
+    const token = req.nextauth.token;
+    const role = token?.role;
     const path = req.nextUrl.pathname;
+
+    if (token?.error === "AccessDenied") {
+      return NextResponse.redirect(new URL("/login", req.url));
+    }
 
     if (path.startsWith("/admin") && role !== "ADMIN") {
       return NextResponse.redirect(new URL("/dashboard", req.url));
@@ -18,7 +23,7 @@ export default withAuth(
   },
   {
     callbacks: {
-      authorized: ({ token }) => Boolean(token),
+      authorized: ({ token }) => Boolean(token) && token.error !== "AccessDenied",
     },
   }
 );

@@ -12,6 +12,8 @@ import {
   canRevokeAuthorization,
   canExportExcel,
   canSeeAllHouses,
+  excelLabelForRole,
+  excelScopeForRole,
   roleLabel,
 } from "@/lib/roles";
 
@@ -52,6 +54,8 @@ export default async function CasasPage() {
 
   const showAll = canSeeAllHouses(role);
   const canExport = canExportExcel(role);
+  const exportScope = excelScopeForRole(role) ?? "authorized";
+  const exportLabel = excelLabelForRole(role);
   const canAuthorize = canAuthorizeHouses(role);
   const canRevoke = canRevokeAuthorization(role);
 
@@ -62,8 +66,8 @@ export default async function CasasPage() {
           <h1 className="section-title text-2xl sm:text-3xl">Casas</h1>
           <p className="mt-1 text-sm text-[var(--muted)]">
             {showAll
-              ? `Todos los registros · rol ${roleLabel(role)}. Solo se autoriza con 3 fotos, comprobante y expediente completo.`
-              : "Solo ves las casas autorizadas que tú levantaste. Al crear una nueva puedes completar fotos en el expediente."}
+              ? `Todas las casas de todos los capturistas · rol ${roleLabel(role)}. Solo se autoriza con 3 fotos, comprobante y expediente completo.`
+              : "Solo ves las casas que tú levantaste. Tu Excel de seguimiento incluye esas mismas (aunque falten fotos o autorización)."}
           </p>
         </div>
         <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
@@ -72,7 +76,8 @@ export default async function CasasPage() {
           </Link>
           {canExport && (
             <ExportExcelButton
-              label="Excel autorizadas"
+              scope={exportScope}
+              label={exportLabel}
               className="inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-[var(--wa-green)] px-4 py-2.5 text-sm font-semibold text-[var(--wa-darker)] transition hover:brightness-105 disabled:opacity-60 sm:w-auto"
             />
           )}
@@ -97,6 +102,8 @@ export default async function CasasPage() {
           canAuthorize={canAuthorize}
           canRevoke={canRevoke}
           canExport={canExport}
+          exportScope={exportScope}
+          exportLabel={exportLabel}
         />
       )}
     </div>

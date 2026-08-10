@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { Formik, Form, Field, ErrorMessage } from "formik";
-import { signIn } from "next-auth/react";
+import { getSession, signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { bindAuthLocalState, prepareFreshLogin } from "@/lib/auth-client";
 import { registerSchema } from "@/lib/validations";
 
 export default function RegisterPage() {
@@ -42,6 +43,7 @@ export default function RegisterPage() {
               setSubmitting(false);
               return;
             }
+            await prepareFreshLogin();
             const login = await signIn("credentials", {
               email: values.email,
               password: values.password,
@@ -50,8 +52,15 @@ export default function RegisterPage() {
             if (login?.error) {
               router.push("/login");
             } else {
-              router.push("/dashboard");
-              router.refresh();
+              const session = await getSession();
+              if (session?.user?.id && session.user.role) {
+                bindAuthLocalState({
+                  id: session.user.id,
+                  role: session.user.role,
+                  email: session.user.email,
+                });
+              }
+              window.location.assign("/dashboard");
             }
             setSubmitting(false);
           }}

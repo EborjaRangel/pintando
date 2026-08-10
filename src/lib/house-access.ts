@@ -3,19 +3,20 @@ import type { AppRole } from "@/lib/roles";
 import { canSeeAllHouses } from "@/lib/roles";
 
 /**
- * Listado principal:
- * - Autorización / Admin: todas las casas
- * - Usuario: solo las autorizadas que él levantó
+ * Visibilidad de casas:
+ * - ADMIN / AUTORIZACION → todas las casas de todos los capturistas
+ * - USER → SOLO las que ese usuario levantó (createdById)
  */
 export function housesWhereForRole(
   role: AppRole | string,
   userId: string
 ): Prisma.HouseWhereInput {
   if (canSeeAllHouses(role)) return {};
-  return { createdById: userId, autorizado: true };
+  // Capturista: nunca ve casas de otros usuarios
+  return { createdById: userId };
 }
 
-/** Listado de autorizados (misma regla que el usuario en el listado principal). */
+/** Autorizados: Admin/Autorización ven todas; Usuario solo las suyas autorizadas. */
 export function autorizadosWhereForRole(
   role: AppRole | string,
   userId: string
@@ -24,7 +25,7 @@ export function autorizadosWhereForRole(
   return { autorizado: true, createdById: userId };
 }
 
-/** Detalle / fotos: el capturista puede abrir las que él creó aunque aún no estén autorizadas. */
+/** Detalle / fotos: el capturista solo abre las que él creó. */
 export function canAccessHouse(opts: {
   role: AppRole | string;
   userId: string;

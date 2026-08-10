@@ -9,6 +9,7 @@ import {
   getAuthorizationBlockers,
   type CompletenessStatus,
 } from "@/lib/house-status";
+import type { ExcelExportScope } from "@/lib/roles";
 import { formatFolio } from "@/lib/folio";
 
 export type CasaRow = {
@@ -71,12 +72,16 @@ export function CasasTable({
   canAuthorize = false,
   canRevoke = false,
   canExport = false,
+  exportScope = "authorized",
+  exportLabel = "Excel (autorizadas)",
 }: {
   houses: CasaRow[];
   showCapturista: boolean;
   canAuthorize?: boolean;
   canRevoke?: boolean;
   canExport?: boolean;
+  exportScope?: ExcelExportScope;
+  exportLabel?: string;
 }) {
   function showAuthControl(house: CasaRow) {
     if (canAuthorize) return true;
@@ -104,15 +109,16 @@ export function CasasTable({
         <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
           <p className="text-sm text-[var(--muted)]">
             {selected.length > 0
-              ? `${selected.length} autorizada(s) seleccionada(s)`
-              : "Solo se exportan casas autorizadas. Selecciona o baja todas las del listado."}
+              ? `${selected.length} casa(s) seleccionada(s)`
+              : exportScope === "tracking"
+                ? "Excel de seguimiento: solo las casas que tú levantaste (completas o no)."
+                : "Excel de autorizadas (todas las de todos los capturistas). Selecciona o baja el listado."}
           </p>
           <ExportExcelButton
+            scope={exportScope}
             ids={selectedIds.length > 0 ? selectedIds : undefined}
             label={
-              selectedIds.length > 0
-                ? `Excel (${selectedIds.length})`
-                : "Excel (autorizadas)"
+              selectedIds.length > 0 ? `Excel (${selectedIds.length})` : exportLabel
             }
             className="inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-[var(--wa-green)] px-4 py-2.5 text-sm font-semibold text-[var(--wa-darker)] transition hover:brightness-105 disabled:opacity-60 sm:w-auto"
           />
