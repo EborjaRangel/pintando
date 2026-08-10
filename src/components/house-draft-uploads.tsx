@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { compressImageFile } from "@/lib/compress-image";
 
 export type DraftAttachments = {
   photos: [File | null, File | null, File | null];
@@ -35,6 +36,20 @@ function PhotoSlot({
 }) {
   const preview = useObjectUrl(file);
   const label = PHOTO_LABELS[slot - 1];
+  const [compressing, setCompressing] = useState(false);
+
+  async function handlePick(raw: File | null) {
+    if (!raw) {
+      onPick(null);
+      return;
+    }
+    setCompressing(true);
+    try {
+      onPick(await compressImageFile(raw));
+    } finally {
+      setCompressing(false);
+    }
+  }
 
   return (
     <div className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--surface)]">
@@ -50,19 +65,20 @@ function PhotoSlot({
         )}
       </div>
       <label className="flex min-h-11 cursor-pointer items-center justify-center px-3 py-2.5 text-center text-sm font-medium text-[var(--accent-ink)] hover:bg-[var(--accent-soft)]">
-        {file ? "Cambiar foto" : "Tomar / subir foto"}
+        {compressing ? "Optimizando…" : file ? "Cambiar foto" : "Tomar / subir foto"}
         <input
           type="file"
           accept="image/*"
           capture="environment"
           className="hidden"
-          onChange={(e) => onPick(e.target.files?.[0] ?? null)}
+          disabled={compressing}
+          onChange={(e) => void handlePick(e.target.files?.[0] ?? null)}
         />
       </label>
       {file && (
         <button
           type="button"
-          className="w-full border-t border-[var(--line)] px-3 py-2 text-xs text-[var(--muted)] hover:bg-[var(--surface-2)]"
+          className="flex min-h-11 w-full items-center justify-center border-t border-[var(--line)] px-3 py-2.5 text-sm text-[var(--muted)] hover:bg-[var(--surface-2)]"
           onClick={() => onPick(null)}
         >
           Quitar
@@ -88,8 +104,8 @@ export function HouseDraftUploads({
       <section className="space-y-3">
         <h2 className="section-title text-lg">Fotografías (3)</h2>
         <p className="text-sm text-[var(--muted)]">
-          Sube fachada, lateral y contexto. JPG, PNG o WEBP · máximo 8 MB c/u. Puedes completarlas
-          después si hace falta.
+          Sube fachada, lateral y contexto. Se optimizan solas (máx. ~1600px) para pesar menos.
+          Puedes completarlas después si hace falta.
         </p>
         <div className="grid gap-4 sm:grid-cols-3">
           {[1, 2, 3].map((slot) => (
@@ -132,9 +148,20 @@ export function HouseDraftUploads({
                 type="file"
                 accept="image/*,application/pdf"
                 className="hidden"
-                onChange={(e) =>
-                  onChange({ ...value, comprobante: e.target.files?.[0] ?? null })
-                }
+                onChange={(e) => {
+                  const raw = e.target.files?.[0] ?? null;
+                  if (!raw) {
+                    onChange({ ...value, comprobante: null });
+                    return;
+                  }
+                  if (raw.type.startsWith("image/")) {
+                    void compressImageFile(raw).then((file) =>
+                      onChange({ ...value, comprobante: file })
+                    );
+                    return;
+                  }
+                  onChange({ ...value, comprobante: raw });
+                }}
               />
             </label>
             {value.comprobante && (

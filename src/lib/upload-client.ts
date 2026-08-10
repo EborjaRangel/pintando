@@ -1,3 +1,5 @@
+import { compressImageFile } from "@/lib/compress-image";
+
 const MAX_BYTES = 8 * 1024 * 1024;
 
 export function sanitizeUploadFilename(file: File): string {
@@ -23,14 +25,23 @@ export function assertUploadableFile(file: File, label = "Archivo"): void {
   }
 }
 
+/** Prepara el archivo: fotos se aligeran; PDF/comprobante se valida tal cual. */
+export async function prepareUploadFile(file: File): Promise<File> {
+  const prepared = file.type.startsWith("image/")
+    ? await compressImageFile(file)
+    : file;
+  assertUploadableFile(prepared);
+  return prepared;
+}
+
 export async function postUpload(
   url: string,
   file: File,
   extra?: Record<string, string>
 ): Promise<unknown> {
-  assertUploadableFile(file);
+  const prepared = await prepareUploadFile(file);
   const form = new FormData();
-  form.append("file", file, sanitizeUploadFilename(file));
+  form.append("file", prepared, sanitizeUploadFilename(prepared));
   if (extra) {
     for (const [key, value] of Object.entries(extra)) {
       form.append(key, value);

@@ -53,7 +53,10 @@ export default async function MapaPage() {
           Azul: autorizada. Verde: expediente completo. Naranja: pendiente.
         </p>
       </div>
-      <CoyoacanMapLoader houses={geojson} />
+      {/* En móvil el mapa ocupa todo el ancho (sin márgenes laterales) */}
+      <div className="-mx-4 sm:mx-0 [&_.rounded-xl]:max-sm:rounded-none">
+        <CoyoacanMapLoader houses={geojson} />
+      </div>
     </div>
   );
 }

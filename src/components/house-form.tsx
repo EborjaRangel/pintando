@@ -200,11 +200,11 @@ export function HouseForm({ initialValues, houseId, folio, mode = "create" }: Pr
             <HouseDraftUploads value={attachments} onChange={setAttachments} />
           )}
 
-          <label className="flex items-start gap-3 rounded-lg border border-[var(--line)] bg-[var(--surface)] p-4">
+          <label className="flex min-h-11 cursor-pointer items-start gap-3 rounded-lg border border-[var(--line)] bg-[var(--surface)] p-4">
             <Field
               type="checkbox"
               name="expedienteCompleto"
-              className="mt-1 h-5 w-5 shrink-0 accent-[var(--accent)]"
+              className="mt-0.5 h-5 w-5 shrink-0 accent-[var(--accent)]"
             />
             <span>
               <span className="block font-medium text-[var(--ink)]">Expediente completo</span>

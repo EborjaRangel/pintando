@@ -80,7 +80,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       {canExportExcel(role) && (
         <ExportExcelButton
           label="Excel autorizadas"
-          className="inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-[var(--wa-green)] px-3 py-2.5 text-sm font-semibold text-[var(--wa-darker)] transition hover:brightness-105 disabled:opacity-60 md:w-auto"
+          className="inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-[var(--wa-green)] px-3 py-2.5 text-sm font-semibold text-[var(--wa-darker)] transition hover:brightness-105 disabled:opacity-60 lg:w-auto"
         />
       )}
     </>
@@ -97,22 +97,23 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             Pintando <span className="text-[var(--wa-green)]">Coyoacán</span>
           </Link>
 
-          <nav className="hidden items-center gap-1 md:flex">{navItems}</nav>
+          {/* Desktop amplio: menú horizontal. Tablet y móvil: hamburguesa. */}
+          <nav className="hidden items-center gap-1 lg:flex">{navItems}</nav>
 
-          <div className="flex items-center gap-2">
-            <span className="hidden max-w-[12rem] truncate text-sm text-white/80 lg:inline">
+          <div className="flex shrink-0 items-center gap-2">
+            <span className="hidden max-w-[12rem] truncate text-sm text-white/80 xl:inline">
               {data?.user?.name} · {roleLabel(role)}
             </span>
             <button
               type="button"
               onClick={() => signOut({ callbackUrl: "/login" })}
-              className="hidden min-h-11 items-center rounded-lg border border-white/25 px-3 py-2.5 text-sm text-white transition hover:bg-white/10 md:inline-flex"
+              className="hidden min-h-11 items-center rounded-lg border border-white/25 px-3 py-2.5 text-sm text-white transition hover:bg-white/10 lg:inline-flex"
             >
               Salir
             </button>
             <button
               type="button"
-              className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg border border-white/25 text-white transition hover:bg-white/10 md:hidden"
+              className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg border border-white/25 text-white transition hover:bg-white/10 lg:hidden"
               aria-expanded={menuOpen}
               aria-controls="mobile-nav"
               aria-label={menuOpen ? "Cerrar menú" : "Abrir menú"}
@@ -144,7 +145,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         {menuOpen && (
           <div
             id="mobile-nav"
-            className="border-t border-white/10 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-2 md:hidden"
+            className="max-h-[min(70dvh,calc(100dvh-4.5rem))] overflow-y-auto overscroll-contain border-t border-white/10 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-2 lg:hidden"
           >
             <nav className="flex flex-col gap-1">{navItems}</nav>
             <div className="mt-3 border-t border-white/10 pt-3">

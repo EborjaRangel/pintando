@@ -410,7 +410,7 @@ export function CoyoacanMap({ houses }: Props) {
       <div className="relative overflow-hidden rounded-xl border border-[var(--line)] bg-white shadow-sm">
         <div
           ref={containerRef}
-          className="h-[min(55dvh,640px)] w-full min-h-[280px] sm:h-[min(70vh,640px)] sm:min-h-[360px]"
+          className="h-[min(62dvh,640px)] w-full min-h-[300px] sm:h-[min(70vh,640px)] sm:min-h-[360px]"
         />
 
         {loading && (
@@ -438,14 +438,16 @@ export function CoyoacanMap({ houses }: Props) {
         )}
 
         {selectedHouse && (
-          <div className="absolute bottom-3 left-3 right-3 z-20 max-w-sm rounded-lg border border-[var(--line)] bg-white p-3 shadow-lg sm:bottom-4 sm:left-4 sm:right-auto">
+          <div className="absolute bottom-3 left-3 right-3 z-20 max-h-[42%] max-w-sm overflow-y-auto overscroll-contain rounded-lg border border-[var(--line)] bg-white p-3 shadow-lg sm:bottom-4 sm:left-4 sm:right-auto sm:max-h-none">
             <p className="text-xs font-semibold text-[var(--wa-teal)]">
               {selectedHouse.properties.folio}
             </p>
             <p className="break-words font-semibold text-[var(--ink)]">
               {selectedHouse.properties.address}
             </p>
-            <p className="text-xs text-[var(--muted)]">{selectedHouse.properties.colonia}</p>
+            <p className="break-words text-xs text-[var(--muted)]">
+              {selectedHouse.properties.colonia}
+            </p>
             {selectedHouse.properties.autorizado && (
               <p className="mt-1 text-xs font-medium text-blue-700">Autorizada</p>
             )}

@@ -60,7 +60,7 @@ export function ExportExcelButton({
         {loading ? "Generando…" : label}
       </button>
       {error && (
-        <p className="absolute right-0 top-full z-50 mt-1 max-w-[min(18rem,calc(100vw-2rem))] whitespace-normal rounded-md bg-red-50 px-2 py-1 text-xs text-red-700 shadow">
+        <p className="absolute left-0 right-0 top-full z-50 mt-1 whitespace-normal rounded-md bg-red-50 px-2 py-1 text-xs text-red-700 shadow sm:left-auto sm:right-0 sm:max-w-[18rem]">
           {error}
         </p>
       )}

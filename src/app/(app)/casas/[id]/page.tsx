@@ -46,16 +46,19 @@ export default async function CasaDetallePage({ params }: Props) {
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="space-y-2">
-          <Link href="/casas" className="text-sm text-[var(--muted)] hover:underline">
+      <div className="flex flex-col items-stretch gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0 flex-1 space-y-2">
+          <Link
+            href="/casas"
+            className="inline-flex min-h-11 items-center text-sm text-[var(--muted)] hover:underline"
+          >
             ← Volver al listado
           </Link>
           <p className="font-[family-name:var(--font-display)] text-sm font-semibold tracking-wide text-[var(--wa-teal)]">
             Folio {formatFolio(house.folio)}
           </p>
           <h1 className="section-title break-words text-2xl sm:text-3xl">{house.address}</h1>
-          <p className="text-[var(--muted)]">
+          <p className="break-words text-sm text-[var(--muted)] sm:text-base">
             {house.colonia} · {house.latitude.toFixed(5)}, {house.longitude.toFixed(5)}
           </p>
           <div className="flex flex-wrap items-center gap-2">
@@ -87,10 +90,12 @@ export default async function CasaDetallePage({ params }: Props) {
             )}
           </div>
         </div>
-        <div className="space-y-2 text-sm text-[var(--muted)]">
-          <p>Capturista: {house.createdBy.name}</p>
+        <div className="w-full shrink-0 space-y-2 text-sm text-[var(--muted)] sm:w-auto sm:text-right">
+          <p className="break-words">Capturista: {house.createdBy.name}</p>
           {canAuthorize && (
-            <AuthorizeHouseButton houseId={house.id} autorizado={house.autorizado} />
+            <div className="sm:flex sm:justify-end">
+              <AuthorizeHouseButton houseId={house.id} autorizado={house.autorizado} />
+            </div>
           )}
         </div>
       </div>

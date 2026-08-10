@@ -29,7 +29,7 @@ export default async function DashboardPage() {
         <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[var(--wa-teal)]">
           Programa
         </p>
-        <h1 className="font-[family-name:var(--font-display)] text-3xl font-semibold tracking-tight text-[var(--wa-dark)] sm:text-4xl">
+        <h1 className="font-[family-name:var(--font-display)] text-2xl font-semibold tracking-tight text-[var(--wa-dark)] sm:text-4xl">
           Pintando Coyoacán
         </h1>
         <p className="max-w-2xl text-[var(--muted)]">

@@ -65,6 +65,8 @@ export async function initBasemap(options: InitOptions): Promise<() => void> {
       center: options.center,
       zoom: options.zoom,
       attributionControl: {},
+      // En móvil: pide dos dedos para pan/zoom y no pelea con el scroll de la página
+      cooperativeGestures: true,
     });
     libreMap.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
     map = libreMap;
@@ -94,6 +96,7 @@ export async function initBasemap(options: InitOptions): Promise<() => void> {
       center: options.center,
       zoom: options.zoom,
       attributionControl: true,
+      cooperativeGestures: true,
     });
     boxMap.addControl(new mapboxgl.NavigationControl({ showCompass: false }), "top-right");
     map = boxMap;

@@ -179,13 +179,15 @@ export function CasasTable({
             <tr>
               {canExport && (
                 <th className="px-4 py-3 font-medium">
-                  <input
-                    type="checkbox"
-                    checked={allSelected}
-                    onChange={toggleAll}
-                    aria-label="Seleccionar todas"
-                    className="h-4 w-4 accent-[var(--accent)]"
-                  />
+                  <label className="inline-flex min-h-11 min-w-11 cursor-pointer items-center justify-center">
+                    <input
+                      type="checkbox"
+                      checked={allSelected}
+                      onChange={toggleAll}
+                      aria-label="Seleccionar todas"
+                      className="h-5 w-5 accent-[var(--accent)]"
+                    />
+                  </label>
                 </th>
               )}
               <th className="px-4 py-3 font-medium">Folio</th>
@@ -205,13 +207,15 @@ export function CasasTable({
               <tr key={house.id} className="border-t border-[var(--line)]">
                 {canExport && (
                   <td className="px-4 py-3">
-                    <input
-                      type="checkbox"
-                      checked={selected.includes(house.id)}
-                      onChange={() => toggleOne(house.id)}
-                      aria-label={`Seleccionar ${house.address}`}
-                      className="h-4 w-4 accent-[var(--accent)]"
-                    />
+                    <label className="inline-flex min-h-11 min-w-11 cursor-pointer items-center justify-center">
+                      <input
+                        type="checkbox"
+                        checked={selected.includes(house.id)}
+                        onChange={() => toggleOne(house.id)}
+                        aria-label={`Seleccionar ${house.address}`}
+                        className="h-5 w-5 accent-[var(--accent)]"
+                      />
+                    </label>
                   </td>
                 )}
                 <td className="whitespace-nowrap px-4 py-3 font-semibold text-[var(--wa-teal)]">
@@ -244,7 +248,7 @@ export function CasasTable({
                 <td className="px-4 py-3 text-right">
                   <Link
                     href={`/casas/${house.id}`}
-                    className="inline-flex min-h-10 items-center rounded-lg px-3 text-[var(--accent-ink)] underline"
+                    className="inline-flex min-h-11 items-center rounded-lg px-3 text-[var(--accent-ink)] underline"
                   >
                     Abrir
                   </Link>

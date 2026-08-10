@@ -51,7 +51,8 @@ body {
 }
 
 .field {
-  @apply w-full min-h-11 rounded-lg border border-[var(--line)] bg-white px-3 py-2.5 text-sm text-[var(--ink)] outline-none transition focus:border-[var(--wa-teal)] focus:ring-2 focus:ring-[var(--wa-light)];
+  /* text-base en móvil evita zoom forzado de iOS al enfocar inputs */
+  @apply w-full min-h-11 rounded-lg border border-[var(--line)] bg-white px-3 py-2.5 text-base text-[var(--ink)] outline-none transition focus:border-[var(--wa-teal)] focus:ring-2 focus:ring-[var(--wa-light)] sm:text-sm;
 }
 
 .label {
@@ -86,4 +87,24 @@ body {
 .maplibregl-ctrl-attrib,
 .mapboxgl-ctrl-attrib {
   font-size: 10px;
+}
+
+/* Controles de zoom con área táctil cómoda */
+.mapboxgl-ctrl-group button,
+.maplibregl-ctrl-group button {
+  width: 44px !important;
+  height: 44px !important;
+}
+
+/* Selects nativos del admin también 16px en móvil */
+select.field,
+textarea.field {
+  font-size: 1rem;
+}
+
+@media (min-width: 640px) {
+  select.field,
+  textarea.field {
+    font-size: 0.875rem;
+  }
 }

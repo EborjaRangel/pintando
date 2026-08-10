@@ -51,7 +51,8 @@ export function HouseUploads({ houseId, photos, comprobanteUrl }: Props) {
       <section className="space-y-3">
         <h2 className="section-title">Fotografías (3 requeridas)</h2>
         <p className="text-sm text-[var(--muted)]">
-          Sube una foto de fachada, una lateral y una de contexto. Formatos: JPG, PNG o WEBP.
+          Sube fachada, lateral y contexto. Las fotos se optimizan solas (máx. ~1600px) antes de
+          guardarlas.
         </p>
         <div className="grid gap-4 sm:grid-cols-3">
           {[1, 2, 3].map((slot) => {
@@ -78,7 +79,7 @@ export function HouseUploads({ houseId, photos, comprobanteUrl }: Props) {
                 </div>
                 <label className="flex min-h-11 cursor-pointer items-center justify-center px-3 py-2.5 text-center text-sm font-medium text-[var(--accent-ink)] hover:bg-[var(--accent-soft)]">
                   {busy === `photo-${slot}`
-                    ? "Subiendo..."
+                    ? "Optimizando y subiendo…"
                     : photo
                       ? "Reemplazar foto"
                       : "Tomar / subir foto"}
@@ -116,7 +117,7 @@ export function HouseUploads({ houseId, photos, comprobanteUrl }: Props) {
             <p className="mb-3 text-sm text-[var(--muted)]">Aún no se ha subido comprobante.</p>
           )}
           <label className="btn-secondary inline-flex w-full cursor-pointer sm:w-auto">
-            {busy === "comprobante" ? "Subiendo..." : "Subir comprobante"}
+            {busy === "comprobante" ? "Optimizando y subiendo…" : "Subir comprobante"}
             <input
               type="file"
               accept="image/*,application/pdf"

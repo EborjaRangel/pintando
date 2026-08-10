@@ -197,7 +197,7 @@ export function AdminUsersClient({
                 <td className="px-4 py-3">{user.email}</td>
                 <td className="px-4 py-3">
                   <select
-                    className="field min-h-10 py-1.5 text-sm"
+                    className="field min-h-11 min-w-[10rem]"
                     value={user.role}
                     disabled={user.id === currentUserId}
                     onChange={(e) =>
@@ -216,7 +216,7 @@ export function AdminUsersClient({
                     {user.role === "AUTORIZACION" && (
                       <button
                         type="button"
-                        className="inline-flex min-h-10 items-center rounded-lg border border-[var(--line)] px-3 py-1.5 text-xs font-medium text-[var(--accent-ink)] hover:bg-[var(--surface-2)] disabled:opacity-50"
+                        className="inline-flex min-h-11 items-center rounded-lg border border-[var(--line)] px-3 py-2 text-sm font-medium text-[var(--accent-ink)] hover:bg-[var(--surface-2)] disabled:opacity-50"
                         onClick={() => patchUser(user.id, { role: "USER" })}
                         disabled={user.id === currentUserId}
                       >
@@ -225,7 +225,7 @@ export function AdminUsersClient({
                     )}
                     <button
                       type="button"
-                      className="inline-flex min-h-10 items-center rounded-lg border border-[var(--line)] px-3 py-1.5 text-xs font-medium text-[var(--accent-ink)] hover:bg-[var(--surface-2)] disabled:opacity-50"
+                      className="inline-flex min-h-11 items-center rounded-lg border border-[var(--line)] px-3 py-2 text-sm font-medium text-[var(--accent-ink)] hover:bg-[var(--surface-2)] disabled:opacity-50"
                       onClick={() => patchUser(user.id, { active: !user.active })}
                       disabled={user.id === currentUserId}
                     >
@@ -233,7 +233,7 @@ export function AdminUsersClient({
                     </button>
                     <button
                       type="button"
-                      className="inline-flex min-h-10 items-center rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 disabled:opacity-50"
+                      className="inline-flex min-h-11 items-center rounded-lg border border-red-200 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-50"
                       onClick={() => deleteUser(user.id)}
                       disabled={user.id === currentUserId || user.role === "ADMIN"}
                     >

@@ -26,7 +26,7 @@ export default async function AdminUsuariosPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="section-title text-3xl">Usuarios</h1>
+        <h1 className="section-title text-2xl sm:text-3xl">Usuarios</h1>
         <p className="mt-1 text-sm text-[var(--muted)]">
           Roles: Usuario, Autorización y Admin. Solo Admin puede quitar Autorización; Autorización
           no puede gestionar usuarios.
