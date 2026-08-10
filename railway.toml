@@ -3,6 +3,8 @@ builder = "NIXPACKS"
 buildCommand = "npm run build"
 
 [deploy]
+# db push aquí: en el build Docker no hay red privada a Postgres
+preDeployCommand = "npm run db:deploy"
 startCommand = "npm run start"
 restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 10
