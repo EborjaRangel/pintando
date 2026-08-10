@@ -68,7 +68,7 @@ export default function LoginPage() {
                   name="email"
                   type="email"
                   className="field"
-                  placeholder="admin@pintura.local"
+                  placeholder="tu@correo.com"
                   autoComplete="username"
                 />
                 <ErrorMessage name="email" component="p" className="error" />
@@ -85,12 +85,6 @@ export default function LoginPage() {
             </Form>
           )}
         </Formik>
-        <div className="mt-4 rounded-lg bg-[var(--wa-panel)] px-3 py-2 text-xs leading-relaxed text-[var(--muted)]">
-          <p className="font-medium text-[var(--wa-dark)]">Cuentas (correo completo). Contraseña actual:</p>
-          <p className="font-mono text-[var(--wa-dark)]">Pintando2026!</p>
-          <p className="mt-1">admin@pintura.local · usuario@pintura.local · autorizacion@pintura.local</p>
-          <p>edgabart@gmail.com · jack@pintura.local</p>
-        </div>
         <p className="mt-4 text-center text-sm text-[var(--muted)]">
           ¿Sin cuenta?{" "}
           <Link href="/register" className="font-medium text-[var(--wa-teal)] underline">
