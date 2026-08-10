@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/api";
 import { ROLES, type AppRole } from "@/lib/roles";
@@ -45,16 +46,27 @@ export async function PATCH(request: Request, { params }: Params) {
     );
   }
 
+  let passwordUpdate: { password: string; passwordPlain: string } | undefined;
+  if (typeof body.password === "string" && body.password.trim().length >= 6) {
+    const plain = body.password.trim();
+    passwordUpdate = {
+      password: await bcrypt.hash(plain, 10),
+      passwordPlain: plain,
+    };
+  }
+
   const user = await prisma.user.update({
     where: { id },
     data: {
       ...(typeof body.active === "boolean" ? { active: body.active } : {}),
       ...(isAppRole(body.role) ? { role: body.role } : {}),
+      ...(passwordUpdate ?? {}),
     },
     select: {
       id: true,
       name: true,
       email: true,
+      passwordPlain: true,
       role: true,
       active: true,
       createdAt: true,

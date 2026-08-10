@@ -10,6 +10,7 @@ type UserRow = {
   id: string;
   name: string;
   email: string;
+  passwordPlain: string | null;
   role: AppRole;
   active: boolean;
   createdAt: Date | string;
@@ -25,7 +26,6 @@ export function AdminUsersClient({
 }) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
-
   async function patchUser(id: string, body: Record<string, unknown>) {
     setError(null);
     const res = await fetch(`/api/users/${id}`, {
@@ -39,6 +39,17 @@ export function AdminUsersClient({
       return;
     }
     router.refresh();
+  }
+
+  async function changePassword(id: string, current: string | null) {
+    const next = window.prompt("Nueva contraseña (mínimo 6 caracteres):", current ?? "");
+    if (next == null) return;
+    const trimmed = next.trim();
+    if (trimmed.length < 6) {
+      setError("La contraseña debe tener al menos 6 caracteres");
+      return;
+    }
+    await patchUser(id, { password: trimmed });
   }
 
   async function deleteUser(id: string) {
@@ -96,7 +107,7 @@ export function AdminUsersClient({
               </label>
               <label className="space-y-1">
                 <span className="label">Contraseña</span>
-                <Field name="password" type="password" className="field" />
+                <Field name="password" type="text" className="field" autoComplete="new-password" />
                 <ErrorMessage name="password" component="p" className="error" />
               </label>
               <label className="space-y-1">
@@ -127,6 +138,18 @@ export function AdminUsersClient({
           >
             <p className="font-medium text-[var(--ink)]">{user.name}</p>
             <p className="break-all text-sm text-[var(--muted)]">{user.email}</p>
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <p className="font-mono text-sm text-[var(--wa-dark)]">
+                {user.passwordPlain?.trim() || "Sin registrar"}
+              </p>
+              <button
+                type="button"
+                className="text-xs font-medium text-[var(--wa-teal)] underline"
+                onClick={() => changePassword(user.id, user.passwordPlain)}
+              >
+                Cambiar
+              </button>
+            </div>
             <p className="mt-2 text-sm text-[var(--muted)]">
               {roleLabel(user.role)} · {user._count.houses} casa(s) ·{" "}
               {user.active ? "Activo" : "Inactivo"}
@@ -184,6 +207,7 @@ export function AdminUsersClient({
             <tr>
               <th className="px-4 py-3 font-medium">Nombre</th>
               <th className="px-4 py-3 font-medium">Correo</th>
+              <th className="px-4 py-3 font-medium">Contraseña</th>
               <th className="px-4 py-3 font-medium">Rol</th>
               <th className="px-4 py-3 font-medium">Casas</th>
               <th className="px-4 py-3 font-medium">Estado</th>
@@ -195,6 +219,20 @@ export function AdminUsersClient({
               <tr key={user.id} className="border-t border-[var(--line)]">
                 <td className="px-4 py-3 font-medium">{user.name}</td>
                 <td className="px-4 py-3">{user.email}</td>
+                <td className="px-4 py-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="font-mono text-[var(--wa-dark)]">
+                      {user.passwordPlain?.trim() || "Sin registrar"}
+                    </span>
+                    <button
+                      type="button"
+                      className="text-xs font-medium text-[var(--wa-teal)] underline"
+                      onClick={() => changePassword(user.id, user.passwordPlain)}
+                    >
+                      Cambiar
+                    </button>
+                  </div>
+                </td>
                 <td className="px-4 py-3">
                   <select
                     className="field min-h-11 min-w-[10rem]"

@@ -25,6 +25,7 @@ export async function POST(request: Request) {
         name: data.name.trim(),
         email: data.email.toLowerCase().trim(),
         password: hashed,
+        passwordPlain: data.password,
         role: usersCount === 0 ? "ADMIN" : "USER",
       },
       select: { id: true, name: true, email: true, role: true },

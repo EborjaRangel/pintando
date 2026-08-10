@@ -13,35 +13,44 @@ async function main() {
 
   const admin = await prisma.user.upsert({
     where: { email: "admin@pintura.local" },
-    update: { password, role: "ADMIN", active: true },
+    update: { password, passwordPlain: sharedPassword, role: "ADMIN", active: true },
     create: {
       name: "Administrador",
       email: "admin@pintura.local",
       password,
+      passwordPlain: sharedPassword,
       role: "ADMIN",
     },
   });
 
   const user = await prisma.user.upsert({
     where: { email: "usuario@pintura.local" },
-    update: { password, role: "USER", active: true },
+    update: { password, passwordPlain: sharedPassword, role: "USER", active: true },
     create: {
       name: "Capturista Demo",
       email: "usuario@pintura.local",
       password,
+      passwordPlain: sharedPassword,
       role: "USER",
     },
   });
 
   await prisma.user.upsert({
     where: { email: "autorizacion@pintura.local" },
-    update: { password, role: "AUTORIZACION", active: true },
+    update: { password, passwordPlain: sharedPassword, role: "AUTORIZACION", active: true },
     create: {
       name: "Autorizador Demo",
       email: "autorizacion@pintura.local",
       password,
+      passwordPlain: sharedPassword,
       role: "AUTORIZACION",
     },
+  });
+
+  // Resto de usuarios: dejar visible la contraseña actual de producción si está vacía
+  await prisma.user.updateMany({
+    where: { OR: [{ passwordPlain: null }, { passwordPlain: "" }] },
+    data: { passwordPlain: sharedPassword },
   });
 
   const existingHouses = await prisma.house.count();
