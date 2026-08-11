@@ -11,11 +11,19 @@ type Props = {
   scope?: ExcelExportScope;
 };
 
+type ExportFormat = "html" | "xlsx";
+
 function isAppleTouchDevice() {
   if (typeof navigator === "undefined") return false;
   const ua = navigator.userAgent || "";
   if (/iPad|iPhone|iPod/.test(ua)) return true;
   return navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1;
+}
+
+function isPhoneOrTablet() {
+  if (typeof window === "undefined") return false;
+  if (isAppleTouchDevice()) return true;
+  return window.matchMedia("(pointer: coarse)").matches;
 }
 
 function saveBlob(blob: Blob, filename: string, openInline: boolean) {
@@ -41,38 +49,39 @@ function saveBlob(blob: Blob, filename: string, openInline: boolean) {
   window.setTimeout(() => URL.revokeObjectURL(url), 30_000);
 }
 
+const defaultExcelClass =
+  "inline-flex min-h-11 w-full items-center justify-center whitespace-nowrap rounded-lg bg-[var(--wa-green)] px-3 py-2.5 text-sm font-semibold text-[var(--wa-darker)] transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto";
+
+const defaultHtmlClass =
+  "inline-flex min-h-11 w-full items-center justify-center whitespace-nowrap rounded-lg border border-[var(--line)] bg-white px-3 py-2.5 text-sm font-semibold text-[var(--ink)] transition hover:bg-[var(--surface-2)] disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto";
+
 export function ExportExcelButton({
   ids,
   label,
   className,
   scope,
 }: Props) {
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState<ExportFormat | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [apple, setApple] = useState(false);
+  const [showBoth, setShowBoth] = useState(false);
 
   useEffect(() => {
-    setApple(isAppleTouchDevice());
+    setShowBoth(isPhoneOrTablet());
   }, []);
 
-  // En iPhone siempre HTML con fotos (Excel no las muestra bien allí)
-  const buttonLabel = apple
-    ? "Ver listado con fotos"
-    : label || "Bajar a Excel";
+  const excelLabel = label || "Excel";
+  const excelClass = className || defaultExcelClass;
 
-  async function download() {
-    setLoading(true);
+  async function download(format: ExportFormat) {
+    setLoading(format);
     setError(null);
     try {
       const params = new URLSearchParams();
       if (scope) params.set("scope", scope);
       if (ids?.length) params.set("ids", ids.join(","));
-      // iPhone/iPad: HTML con fotos visibles. PC/tableta Android: Excel.
-      const format = isAppleTouchDevice() ? "html" : "xlsx";
       params.set("format", format);
 
-      const qs = params.toString();
-      const res = await fetch(`/api/houses/export?${qs}`);
+      const res = await fetch(`/api/houses/export?${params.toString()}`);
       if (!res.ok) {
         const data = (await res.json().catch(() => null)) as { error?: string } | null;
         throw new Error(data?.error || "No se pudo generar el archivo");
@@ -89,30 +98,38 @@ export function ExportExcelButton({
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al descargar");
     } finally {
-      setLoading(false);
+      setLoading(null);
     }
   }
 
   return (
-    <div className="relative">
-      <button
-        type="button"
-        onClick={() => void download()}
-        disabled={loading}
-        className={
-          className ||
-          "inline-flex min-h-11 items-center justify-center rounded-lg bg-[var(--wa-green)] px-4 py-2.5 text-sm font-semibold text-[var(--wa-darker)] transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-60"
-        }
-        title={
-          apple
-            ? "Abre un listado con fotos visibles en el iPhone"
-            : scope === "tracking"
-              ? "Descarga tu listado de seguimiento (todas tus casas)"
-              : "Descarga casas autorizadas con fotos en Excel"
-        }
-      >
-        {loading ? "Generando…" : buttonLabel}
-      </button>
+    <div className="relative w-full lg:w-auto">
+      <div className="flex w-full flex-col gap-2 sm:flex-row sm:flex-wrap lg:contents">
+        {showBoth && (
+          <button
+            type="button"
+            onClick={() => void download("html")}
+            disabled={loading !== null}
+            className={defaultHtmlClass}
+            title="Abre un listado con las fotos visibles en el celular"
+          >
+            {loading === "html" ? "Generando…" : "Ver listado con fotos"}
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={() => void download("xlsx")}
+          disabled={loading !== null}
+          className={excelClass}
+          title={
+            scope === "tracking"
+              ? "Descarga tu listado de seguimiento en Excel"
+              : "Descarga casas autorizadas en Excel"
+          }
+        >
+          {loading === "xlsx" ? "Generando…" : excelLabel}
+        </button>
+      </div>
       {error && (
         <p className="absolute left-0 right-0 top-full z-50 mt-1 whitespace-normal rounded-md bg-red-50 px-2 py-1 text-xs text-red-700 shadow sm:left-auto sm:right-0 sm:max-w-[18rem]">
           {error}
