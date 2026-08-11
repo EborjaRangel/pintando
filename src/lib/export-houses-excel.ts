@@ -47,12 +47,12 @@ function looksLikePdf(buffer: Buffer, contentType?: string | null, url?: string)
 }
 
 /**
- * Descarga (o lee) cualquier imagen y la convierte a JPEG embebible en Excel.
- * WebP/HEIC/PNG grandes suelen fallar si se pasan “crudos” a ExcelJS.
+ * Descarga (o lee) cualquier imagen y la convierte a PNG embebible en Excel.
+ * PNG + ancla twoCell es más compatible con Excel/Files en iPhone.
  */
 async function tryReadImage(
   url: string | null | undefined
-): Promise<{ buffer: Buffer; extension: "jpeg" } | null> {
+): Promise<{ buffer: Buffer; extension: "png" } | null> {
   if (!url) return null;
 
   try {
@@ -73,18 +73,18 @@ async function tryReadImage(
     if (!raw.length) return null;
     if (looksLikePdf(raw, contentType, url)) return null;
 
-    const jpeg = await sharp(raw)
+    const png = await sharp(raw)
       .rotate()
       .resize({
-        width: 900,
-        height: 900,
+        width: 640,
+        height: 480,
         fit: "inside",
         withoutEnlargement: true,
       })
-      .jpeg({ quality: 82, mozjpeg: true })
+      .png({ compressionLevel: 8, adaptiveFiltering: true })
       .toBuffer();
 
-    return { buffer: jpeg, extension: "jpeg" };
+    return { buffer: png, extension: "png" };
   } catch {
     return null;
   }
@@ -115,10 +115,14 @@ export async function buildHousesExcel(houses: HouseExportRow[]): Promise<Buffer
     { header: "Capturista", key: "capturista", width: 22 },
     { header: "Correo", key: "email", width: 28 },
     { header: "Fecha alta", key: "fecha", width: 18 },
-    { header: "Foto 1", key: "foto1", width: 18 },
-    { header: "Foto 2", key: "foto2", width: 18 },
-    { header: "Foto 3", key: "foto3", width: 18 },
-    { header: "Comprobante img", key: "comprobanteImg", width: 18 },
+    { header: "Foto 1", key: "foto1", width: 22 },
+    { header: "Foto 2", key: "foto2", width: 22 },
+    { header: "Foto 3", key: "foto3", width: 22 },
+    { header: "Comprobante img", key: "comprobanteImg", width: 22 },
+    { header: "Link foto 1", key: "link1", width: 14 },
+    { header: "Link foto 2", key: "link2", width: 14 },
+    { header: "Link foto 3", key: "link3", width: 14 },
+    { header: "Link comprobante", key: "linkComp", width: 16 },
   ];
 
   const header = sheet.getRow(1);
@@ -179,23 +183,29 @@ export async function buildHousesExcel(houses: HouseExportRow[]): Promise<Buffer
         continue;
       }
 
-      // Texto + enlace: en móvil, si la miniatura no pinta, se puede abrir la foto
-      imageLabels[slot.key] = "Ver foto";
+      // Celda vacía: en iPhone el texto "Ver foto" tapaba / sustituía la miniatura
+      imageLabels[slot.key] = "";
       const imageId = workbook.addImage({
         buffer: image.buffer as unknown as ExcelJS.Buffer,
         extension: image.extension,
       });
       const abs = toAbsoluteMediaUrl(slot.url);
+      // twoCellAnchor (tl+br): mejor soporte en Excel iPhone que oneCell+ext
       sheet.addImage(imageId, {
         tl: { col: slot.col - 1, row: rowIndex - 1 },
-        ext: { width: IMAGE_WIDTH_PX, height: IMAGE_HEIGHT_PX },
+        br: { col: slot.col, row: rowIndex },
         editAs: "oneCell",
         hyperlinks: {
           hyperlink: abs,
           tooltip: abs,
         },
-      });
+      } as unknown as ExcelJS.ImagePosition);
     }
+
+    const linkFor = (url: string | null | undefined) => {
+      if (!url || /\.pdf(\?|$)/i.test(url)) return url ? "PDF" : "";
+      return "Abrir";
+    };
 
     row.values = {
       folio: formatFolio(house.folio),
@@ -217,17 +227,26 @@ export async function buildHousesExcel(houses: HouseExportRow[]): Promise<Buffer
       foto2: imageLabels.foto2,
       foto3: imageLabels.foto3,
       comprobanteImg: imageLabels.comprobanteImg,
+      link1: linkFor(photosBySlot[0]),
+      link2: linkFor(photosBySlot[1]),
+      link3: linkFor(photosBySlot[2]),
+      linkComp: linkFor(house.comprobanteUrl),
     };
-    row.height = 96;
+    row.height = 110;
     row.alignment = { vertical: "middle", wrapText: true };
 
-    // Hipervínculos en celdas de foto (útil en Excel/Files del celular)
-    for (const slot of imageSlots) {
-      if (!slot.url || /\.pdf(\?|$)/i.test(slot.url)) continue;
-      if (imageLabels[slot.key] !== "Ver foto") continue;
+    // Enlaces en columnas aparte (respaldo si el iPhone no pinta la miniatura)
+    const linkSlots: Array<{ url: string | null; col: number }> = [
+      { url: photosBySlot[0], col: 20 },
+      { url: photosBySlot[1], col: 21 },
+      { url: photosBySlot[2], col: 22 },
+      { url: house.comprobanteUrl, col: 23 },
+    ];
+    for (const slot of linkSlots) {
+      if (!slot.url) continue;
       const cell = row.getCell(slot.col);
       cell.value = {
-        text: "Ver foto",
+        text: /\.pdf(\?|$)/i.test(slot.url) ? "Abrir PDF" : "Abrir foto",
         hyperlink: toAbsoluteMediaUrl(slot.url),
       };
       cell.font = { color: { argb: "FF0563C1" }, underline: true };
