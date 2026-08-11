@@ -10,7 +10,6 @@ import {
   excelLabelForRole,
   excelScopeForRole,
   isAdmin,
-  roleLabel,
 } from "@/lib/roles";
 
 export default async function DashboardPage() {
@@ -38,11 +37,6 @@ export default async function DashboardPage() {
         <h1 className="font-[family-name:var(--font-display)] text-2xl font-semibold tracking-tight text-[var(--wa-dark)] sm:text-4xl">
           Pintando Coyoacán
         </h1>
-        <p className="max-w-2xl text-[var(--muted)]">
-          Hola {session!.user.name} ({roleLabel(role)}). Registra casas con fotos, comprobante y
-          geolocalización. El capturista solo ve y exporta lo que él levantó; Admin y Autorización
-          ven las de todos.
-        </p>
       </section>
 
       <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
