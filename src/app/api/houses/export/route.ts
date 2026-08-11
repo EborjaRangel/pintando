@@ -3,6 +3,7 @@ import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/api";
 import { buildHousesExcel } from "@/lib/export-houses-excel";
+import { buildHousesHtml } from "@/lib/export-houses-html";
 import {
   canExportAuthorizedExcel,
   canExportTrackingExcel,
@@ -91,8 +92,27 @@ export async function GET(request: Request) {
     );
   }
 
-  const buffer = await buildHousesExcel(houses);
   const stamp = new Date().toISOString().slice(0, 10);
+  const format = searchParams.get("format") === "html" ? "html" : "xlsx";
+
+  // HTML: fotos visibles en iPhone/Safari. Excel: útil en PC/tableta.
+  if (format === "html") {
+    const html = await buildHousesHtml(houses);
+    const filename =
+      scope === "authorized"
+        ? `pintando-autorizados-${stamp}.html`
+        : `pintando-seguimiento-${stamp}.html`;
+    return new NextResponse(html, {
+      status: 200,
+      headers: {
+        "Content-Type": "text/html; charset=utf-8",
+        "Content-Disposition": `inline; filename="${filename}"`,
+        "Cache-Control": "no-store",
+      },
+    });
+  }
+
+  const buffer = await buildHousesExcel(houses);
   const filename =
     scope === "authorized"
       ? `pintando-autorizados-${stamp}.xlsx`

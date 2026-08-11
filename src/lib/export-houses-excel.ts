@@ -9,21 +9,6 @@ import { formatFolio } from "@/lib/folio";
 const IMAGE_WIDTH_PX = 120;
 const IMAGE_HEIGHT_PX = 90;
 
-function publicBaseUrl(): string {
-  const fromAuth = process.env.NEXTAUTH_URL?.trim();
-  if (fromAuth) return fromAuth.replace(/\/$/, "");
-  const vercel = process.env.VERCEL_URL?.trim();
-  if (vercel) return `https://${vercel.replace(/^https?:\/\//, "")}`;
-  return "";
-}
-
-function toAbsoluteMediaUrl(url: string): string {
-  if (/^https?:\/\//i.test(url)) return url;
-  const base = publicBaseUrl();
-  if (!base) return url;
-  return `${base}${url.startsWith("/") ? url : `/${url}`}`;
-}
-
 export type HouseExportRow = {
   id: string;
   folio: number;
@@ -119,10 +104,6 @@ export async function buildHousesExcel(houses: HouseExportRow[]): Promise<Buffer
     { header: "Foto 2", key: "foto2", width: 22 },
     { header: "Foto 3", key: "foto3", width: 22 },
     { header: "Comprobante img", key: "comprobanteImg", width: 22 },
-    { header: "Link foto 1", key: "link1", width: 14 },
-    { header: "Link foto 2", key: "link2", width: 14 },
-    { header: "Link foto 3", key: "link3", width: 14 },
-    { header: "Link comprobante", key: "linkComp", width: 16 },
   ];
 
   const header = sheet.getRow(1);
@@ -183,29 +164,19 @@ export async function buildHousesExcel(houses: HouseExportRow[]): Promise<Buffer
         continue;
       }
 
-      // Celda vacía: en iPhone el texto "Ver foto" tapaba / sustituía la miniatura
+      // Sin texto en la celda (evita leyendas tipo "Ver foto" en iPhone)
       imageLabels[slot.key] = "";
       const imageId = workbook.addImage({
         buffer: image.buffer as unknown as ExcelJS.Buffer,
         extension: image.extension,
       });
-      const abs = toAbsoluteMediaUrl(slot.url);
-      // twoCellAnchor (tl+br): mejor soporte en Excel iPhone que oneCell+ext
+      // twoCellAnchor: PC/tableta. En iPhone usar export HTML (format=html).
       sheet.addImage(imageId, {
         tl: { col: slot.col - 1, row: rowIndex - 1 },
         br: { col: slot.col, row: rowIndex },
         editAs: "oneCell",
-        hyperlinks: {
-          hyperlink: abs,
-          tooltip: abs,
-        },
       } as unknown as ExcelJS.ImagePosition);
     }
-
-    const linkFor = (url: string | null | undefined) => {
-      if (!url || /\.pdf(\?|$)/i.test(url)) return url ? "PDF" : "";
-      return "Abrir";
-    };
 
     row.values = {
       folio: formatFolio(house.folio),
@@ -227,30 +198,9 @@ export async function buildHousesExcel(houses: HouseExportRow[]): Promise<Buffer
       foto2: imageLabels.foto2,
       foto3: imageLabels.foto3,
       comprobanteImg: imageLabels.comprobanteImg,
-      link1: linkFor(photosBySlot[0]),
-      link2: linkFor(photosBySlot[1]),
-      link3: linkFor(photosBySlot[2]),
-      linkComp: linkFor(house.comprobanteUrl),
     };
     row.height = 110;
     row.alignment = { vertical: "middle", wrapText: true };
-
-    // Enlaces en columnas aparte (respaldo si el iPhone no pinta la miniatura)
-    const linkSlots: Array<{ url: string | null; col: number }> = [
-      { url: photosBySlot[0], col: 20 },
-      { url: photosBySlot[1], col: 21 },
-      { url: photosBySlot[2], col: 22 },
-      { url: house.comprobanteUrl, col: 23 },
-    ];
-    for (const slot of linkSlots) {
-      if (!slot.url) continue;
-      const cell = row.getCell(slot.col);
-      cell.value = {
-        text: /\.pdf(\?|$)/i.test(slot.url) ? "Abrir PDF" : "Abrir foto",
-        hyperlink: toAbsoluteMediaUrl(slot.url),
-      };
-      cell.font = { color: { argb: "FF0563C1" }, underline: true };
-    }
   }
 
   const resumen = workbook.addWorksheet("Resumen");
