@@ -11,6 +11,39 @@ type Props = {
   scope?: ExcelExportScope;
 };
 
+function isAppleTouchDevice() {
+  if (typeof navigator === "undefined") return false;
+  const ua = navigator.userAgent || "";
+  if (/iPad|iPhone|iPod/.test(ua)) return true;
+  // iPadOS reporta MacIntel con touch
+  return navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1;
+}
+
+/** Descarga el blob sin Web Share (tras await fetch el share pierde el gesto del usuario). */
+function saveExcelBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
+
+  if (isAppleTouchDevice()) {
+    // En iOS/iPadOS, `a.download` casi no funciona con blob:; abrir permite Guardar/Compartir
+    const opened = window.open(url, "_blank", "noopener,noreferrer");
+    if (!opened) {
+      window.location.assign(url);
+    }
+    window.setTimeout(() => URL.revokeObjectURL(url), 120_000);
+    return;
+  }
+
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.rel = "noopener";
+  a.style.display = "none";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 30_000);
+}
+
 export function ExportExcelButton({
   ids,
   label = "Bajar a Excel",
@@ -38,38 +71,8 @@ export function ExportExcelButton({
       const disposition = res.headers.get("Content-Disposition") || "";
       const match = disposition.match(/filename="(.+)"/);
       const filename = match?.[1] || "pintando-casas.xlsx";
-      const file = new File([blob], filename, {
-        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      });
 
-      // En celular, ofrecer compartir/guardar (el preview de Files a veces oculta fotos)
-      const isCoarsePointer =
-        typeof window !== "undefined" &&
-        window.matchMedia?.("(pointer: coarse)").matches;
-      const nav = navigator as Navigator & {
-        canShare?: (data?: ShareData) => boolean;
-        share?: (data?: ShareData) => Promise<void>;
-      };
-      if (
-        isCoarsePointer &&
-        typeof nav.share === "function" &&
-        nav.canShare?.({ files: [file] })
-      ) {
-        await nav.share({
-          files: [file],
-          title: filename,
-        });
-        return;
-      }
-
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
+      saveExcelBlob(blob, filename);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al descargar");
     } finally {
