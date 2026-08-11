@@ -60,7 +60,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }, [menuOpen]);
 
   const navLinkClass = (active: boolean) =>
-    `flex min-h-11 items-center rounded-lg px-3 py-2.5 text-sm transition ${
+    `inline-flex shrink-0 items-center whitespace-nowrap rounded-lg px-3 py-2.5 text-sm transition min-h-11 ${
       active
         ? "bg-white/15 text-white"
         : "text-white/80 hover:bg-white/10 hover:text-white"
@@ -94,7 +94,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <ExportExcelButton
           scope={excelScopeForRole(role) ?? undefined}
           label={excelLabelForRole(role)}
-          className="inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-[var(--wa-green)] px-3 py-2.5 text-sm font-semibold text-[var(--wa-darker)] transition hover:brightness-105 disabled:opacity-60 lg:w-auto"
+          className="inline-flex min-h-11 w-full shrink-0 items-center justify-center whitespace-nowrap rounded-lg bg-[var(--wa-green)] px-3 py-2.5 text-sm font-semibold text-[var(--wa-darker)] transition hover:brightness-105 disabled:opacity-60 lg:w-auto"
         />
       )}
     </>
@@ -103,6 +103,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-dvh flex-col">
       <header className="sticky top-0 z-40 bg-[var(--wa-dark)] text-white shadow-md pt-[env(safe-area-inset-top)]">
+        {/* Fila 1: marca + cuenta / hamburguesa */}
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3">
           <Link
             href="/dashboard"
@@ -111,11 +112,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             Pintando <span className="text-[var(--wa-green)]">Coyoacán</span>
           </Link>
 
-          {/* Desktop amplio: menú horizontal. Tablet y móvil: hamburguesa. */}
-          <nav className="hidden items-center gap-1 lg:flex">{navItems}</nav>
-
           <div className="flex shrink-0 items-center gap-2">
-            <span className="hidden max-w-[12rem] truncate text-sm text-white/80 xl:inline">
+            <span className="hidden max-w-[14rem] truncate text-sm text-white/80 lg:inline">
               {data?.user?.name} · {roleLabel(role)}
             </span>
             <button
@@ -156,14 +154,25 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </div>
 
+        {/* Fila 2 (escritorio): menú completo en ancho total, con wrap para que no se corte */}
+        <nav
+          className="mx-auto hidden max-w-6xl flex-wrap items-center gap-1 border-t border-white/10 px-4 py-2 lg:flex"
+          aria-label="Navegación principal"
+        >
+          {navItems}
+        </nav>
+
+        {/* Menú móvil / tableta */}
         {menuOpen && (
           <div
             id="mobile-nav"
-            className="max-h-[min(70dvh,calc(100dvh-4.5rem))] overflow-y-auto overscroll-contain border-t border-white/10 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-2 lg:hidden"
+            className="max-h-[min(85dvh,calc(100dvh-4rem))] overflow-y-auto overscroll-contain border-t border-white/10 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-2 lg:hidden"
           >
-            <nav className="flex flex-col gap-1">{navItems}</nav>
+            <nav className="flex flex-col gap-1" aria-label="Navegación móvil">
+              {navItems}
+            </nav>
             <div className="mt-3 border-t border-white/10 pt-3">
-              <p className="mb-2 truncate text-sm text-white/70">
+              <p className="mb-2 break-words text-sm text-white/70">
                 {data?.user?.name} · {roleLabel(role)}
               </p>
               <button

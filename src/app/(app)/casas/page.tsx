@@ -61,10 +61,10 @@ export default async function CasasPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
-        <div>
-          <h1 className="section-title text-2xl sm:text-3xl">Casas</h1>
-          <p className="mt-1 text-sm text-[var(--muted)]">
+      <div className="flex flex-col gap-4">
+        <div className="min-w-0">
+          <h1 className="section-title break-words text-2xl sm:text-3xl">Casas</h1>
+          <p className="mt-1 max-w-3xl text-sm text-[var(--muted)]">
             {showAll
               ? `Todas las casas de todos los capturistas · rol ${roleLabel(role)}. Solo se autoriza con 3 fotos, comprobante y expediente completo.`
               : "Solo ves las casas que tú levantaste. Tu Excel de seguimiento incluye esas mismas (aunque falten fotos o autorización)."}

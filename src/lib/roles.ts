@@ -54,7 +54,7 @@ export function excelScopeForRole(role: AppRole | string): ExcelExportScope | nu
 }
 
 export function excelLabelForRole(role: AppRole | string): string {
-  return canExportTrackingExcel(role) ? "Excel seguimiento" : "Excel autorizadas";
+  return canExportTrackingExcel(role) ? "Mi Excel" : "Excel";
 }
 
 export function isAdmin(role: AppRole | string): boolean {

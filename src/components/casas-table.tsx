@@ -271,7 +271,7 @@ export function CasasTable({
                 <td className="px-4 py-3">
                   <StatusBadge status={house.status} />
                 </td>
-                <td className="px-4 py-3">
+                <td className="min-w-[10rem] px-4 py-3">
                   {showAuthControl(house) ? (
                     <AuthorizeHouseButton
                       houseId={house.id}

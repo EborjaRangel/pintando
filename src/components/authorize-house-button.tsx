@@ -54,7 +54,7 @@ export function AuthorizeHouseButton({
   return (
     <div className="space-y-1">
       <label
-        className={`inline-flex min-h-11 items-center gap-2 rounded-lg border border-[var(--line)] bg-white px-3 py-2 text-sm ${
+        className={`inline-flex min-h-11 max-w-full items-center gap-2 rounded-lg border border-[var(--line)] bg-white px-3 py-2 text-sm ${
           disabled ? "cursor-not-allowed opacity-60" : "cursor-pointer"
         }`}
         title={

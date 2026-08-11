@@ -51,10 +51,10 @@ export default async function AutorizadosPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
-        <div>
-          <h1 className="section-title text-2xl sm:text-3xl">Autorizados</h1>
-          <p className="mt-1 text-sm text-[var(--muted)]">
+      <div className="flex flex-col gap-4">
+        <div className="min-w-0">
+          <h1 className="section-title break-words text-2xl sm:text-3xl">Autorizados</h1>
+          <p className="mt-1 max-w-3xl text-sm text-[var(--muted)]">
             {showAll
               ? "Casas autorizadas de todo el equipo. Solo estas salen en Excel."
               : "Solo las casas autorizadas que tú levantaste."}
