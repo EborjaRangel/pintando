@@ -5,6 +5,7 @@ import { houseSchema } from "@/lib/validations";
 import { getHouseStatus } from "@/lib/house-status";
 import { yupErrorDetails } from "@/lib/yup-error";
 import { housesWhereForRole } from "@/lib/house-access";
+import { sanitizeCdmxAddress } from "@/lib/mapbox-geocode";
 
 export async function GET() {
   const { session, error } = await requireSession();
@@ -39,7 +40,7 @@ export async function POST(request: Request) {
 
     const house = await prisma.house.create({
       data: {
-        address: data.address.trim(),
+        address: sanitizeCdmxAddress(data.address),
         colonia: data.colonia,
         latitude: data.latitude,
         longitude: data.longitude,

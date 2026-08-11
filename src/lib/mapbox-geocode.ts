@@ -24,6 +24,10 @@ export type ReverseGeocodeResult = {
   colonia?: string;
 };
 
+/** Etiquetas erróneas / turísticas que Mapbox mete como “región” de CDMX. */
+const JUNK_REGION_RE =
+  /\b(mexican\s*riviera|riviera\s*maya|pacific\s*coast|baja\s*california\s*sur)\b/gi;
+
 function normalize(value: string) {
   return value
     .normalize("NFD")
@@ -31,6 +35,21 @@ function normalize(value: string) {
     .toLowerCase()
     .replace(/\s+/g, " ")
     .trim();
+}
+
+/** Quita “Mexican Riviera” y residuos de comas/espacios en direcciones. */
+export function sanitizeCdmxAddress(value: string): string {
+  return value
+    .replace(JUNK_REGION_RE, "")
+    .replace(/\s*,\s*,+/g, ", ")
+    .replace(/^[,\s]+|[,\s]+$/g, "")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
+
+function contextType(id?: string): string {
+  if (!id) return "";
+  return id.split(".")[0] || "";
 }
 
 function matchColonia(candidates: string[]): string | undefined {
@@ -55,6 +74,48 @@ function matchColonia(candidates: string[]): string | undefined {
   return undefined;
 }
 
+function buildAddressFromFeature(feature: GeocodeFeature): string {
+  const street = feature.text?.trim() || "";
+  const number = feature.address?.trim() || "";
+  const streetLine = [street, number].filter(Boolean).join(" ").trim();
+
+  const ctx = feature.context ?? [];
+  const byType = (type: string) =>
+    ctx
+      .filter((c) => contextType(c.id) === type)
+      .map((c) => (c.text_es || c.text || "").trim())
+      .find(Boolean);
+
+  const neighborhood = byType("neighborhood");
+  const locality = byType("locality"); // Coyoacán
+  const place = byType("place"); // Ciudad de México
+  const postcode = byType("postcode");
+  const regionRaw = byType("region") || "";
+  const regionIsJunk =
+    /\b(mexican\s*riviera|riviera\s*maya|pacific\s*coast|baja\s*california\s*sur)\b/i.test(
+      regionRaw
+    );
+  const region = regionIsJunk ? "" : regionRaw;
+
+  // Dirección local: calle, colonia, alcaldía, ciudad — sin “región” turística
+  const parts = [
+    streetLine,
+    neighborhood,
+    locality && locality !== neighborhood ? locality : undefined,
+    place,
+    region && region !== place ? region : undefined,
+    postcode,
+  ].filter((p): p is string => Boolean(p && p.trim()));
+
+  if (parts.length > 0) {
+    return sanitizeCdmxAddress(parts.join(", "));
+  }
+
+  const fallback =
+    feature.place_name_es?.trim() || feature.place_name?.trim() || streetLine;
+  return sanitizeCdmxAddress(fallback);
+}
+
 export async function reverseGeocodeMapbox(
   lng: number,
   lat: number
@@ -68,7 +129,10 @@ export async function reverseGeocodeMapbox(
   );
   url.searchParams.set("language", "es");
   url.searchParams.set("limit", "1");
-  url.searchParams.set("types", "address,poi,neighborhood,place,locality");
+  url.searchParams.set("types", "address,poi,neighborhood,locality");
+  url.searchParams.set("country", "mx");
+  // Bbox aprox. de la alcaldía Coyoacán
+  url.searchParams.set("bbox", "-99.22,19.28,-99.10,19.38");
   url.searchParams.set("access_token", MAPBOX_TOKEN);
 
   const res = await fetch(url.toString());
@@ -78,21 +142,23 @@ export async function reverseGeocodeMapbox(
 
   const data = (await res.json()) as GeocodeResponse;
   const feature = data.features?.[0];
-  const place =
-    feature?.place_name_es?.trim() ||
-    feature?.place_name?.trim();
 
-  if (!place) {
+  if (!feature) {
+    throw new Error("No se encontró dirección para esta ubicación");
+  }
+
+  const address = buildAddressFromFeature(feature);
+  if (!address) {
     throw new Error("No se encontró dirección para esta ubicación");
   }
 
   const contextNames =
-    feature?.context?.map((c) => c.text_es || c.text || "").filter(Boolean) ?? [];
+    feature.context?.map((c) => c.text_es || c.text || "").filter(Boolean) ?? [];
   const colonia = matchColonia([
-    feature?.text || "",
+    feature.text || "",
     ...contextNames,
-    place,
+    address,
   ]);
 
-  return { address: place, colonia };
+  return { address, colonia };
 }

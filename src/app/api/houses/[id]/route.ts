@@ -5,6 +5,7 @@ import { houseSchema } from "@/lib/validations";
 import { getHouseStatus } from "@/lib/house-status";
 import { yupErrorDetails } from "@/lib/yup-error";
 import { canAccessHouse } from "@/lib/house-access";
+import { sanitizeCdmxAddress } from "@/lib/mapbox-geocode";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -71,7 +72,7 @@ export async function PUT(request: Request, { params }: Params) {
     const updated = await prisma.house.update({
       where: { id },
       data: {
-        address: data.address.trim(),
+        address: sanitizeCdmxAddress(data.address),
         colonia: data.colonia,
         latitude: data.latitude,
         longitude: data.longitude,
