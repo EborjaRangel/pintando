@@ -19,11 +19,43 @@ export type HouseExportRow = {
   comprobanteUrl: string | null;
   expedienteCompleto: boolean;
   autorizado?: boolean;
+  autorizadoAt?: Date | null;
   notes: string | null;
   createdAt: Date;
+  updatedAt?: Date;
   createdBy: { name: string; email: string };
+  autorizadoBy?: { name: string; email: string } | null;
   photos: { slot: number; url: string }[];
 };
+
+const MEXICO_TZ = "America/Mexico_City";
+
+function formatMexicoDate(value: Date): string {
+  return value.toLocaleDateString("es-MX", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    timeZone: MEXICO_TZ,
+  });
+}
+
+function formatMexicoTime(value: Date): string {
+  return value.toLocaleTimeString("es-MX", {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+    timeZone: MEXICO_TZ,
+  });
+}
+
+function formatMexicoDateTime(value: Date): string {
+  return `${formatMexicoDate(value)} ${formatMexicoTime(value)}`;
+}
+
+function mapsUrl(latitude: number, longitude: number): string {
+  return `https://www.google.com/maps?q=${latitude},${longitude}`;
+}
 
 function looksLikePdf(buffer: Buffer, contentType?: string | null, url?: string): boolean {
   if (contentType?.includes("pdf")) return true;
@@ -89,17 +121,27 @@ export async function buildHousesExcel(houses: HouseExportRow[]): Promise<Buffer
     { header: "ID", key: "id", width: 28 },
     { header: "Dirección", key: "address", width: 42 },
     { header: "Colonia", key: "colonia", width: 28 },
-    { header: "Latitud", key: "latitude", width: 12 },
-    { header: "Longitud", key: "longitude", width: 12 },
-    { header: "Estado", key: "status", width: 20 },
+    { header: "Latitud", key: "latitude", width: 14 },
+    { header: "Longitud", key: "longitude", width: 14 },
+    { header: "Mapa (georreferencia)", key: "mapa", width: 28 },
+    { header: "Estado expediente", key: "status", width: 20 },
     { header: "Autorizada", key: "autorizada", width: 12 },
+    { header: "Fecha autorización", key: "fechaAutorizacion", width: 20 },
+    { header: "Autorizó", key: "autorizo", width: 22 },
+    { header: "Correo quien autorizó", key: "autorizoEmail", width: 28 },
     { header: "Expediente completo", key: "expediente", width: 18 },
-    { header: "Comprobante", key: "comprobante", width: 18 },
+    { header: "Comprobante", key: "comprobante", width: 14 },
+    { header: "URL comprobante", key: "comprobanteUrl", width: 36 },
     { header: "Fotos", key: "fotosCount", width: 10 },
-    { header: "Colores", key: "notes", width: 36 },
+    { header: "URL foto 1", key: "foto1Url", width: 36 },
+    { header: "URL foto 2", key: "foto2Url", width: 36 },
+    { header: "URL foto 3", key: "foto3Url", width: 36 },
+    { header: "Colores / notas", key: "notes", width: 36 },
     { header: "Capturista", key: "capturista", width: 22 },
-    { header: "Correo", key: "email", width: 28 },
-    { header: "Fecha alta", key: "fecha", width: 18 },
+    { header: "Correo capturista", key: "email", width: 28 },
+    { header: "Fecha levantamiento", key: "fecha", width: 16 },
+    { header: "Hora levantamiento", key: "hora", width: 16 },
+    { header: "Última actualización", key: "actualizado", width: 20 },
     { header: "Foto 1", key: "foto1", width: 22 },
     { header: "Foto 2", key: "foto2", width: 22 },
     { header: "Foto 3", key: "foto3", width: 22 },
@@ -125,8 +167,9 @@ export async function buildHousesExcel(houses: HouseExportRow[]): Promise<Buffer
 
     const rowIndex = i + 2;
     const row = sheet.getRow(rowIndex);
+    const mapLink = mapsUrl(house.latitude, house.longitude);
 
-    // Columnas de imagen: Foto1=16, Foto2=17, Foto3=18, Comprobante=19 (1-based)
+    // Columnas de imagen: Foto1=26, Foto2=27, Foto3=28, Comprobante=29 (1-based)
     const imageSlots: Array<{
       url: string | null;
       col: number;
@@ -134,12 +177,12 @@ export async function buildHousesExcel(houses: HouseExportRow[]): Promise<Buffer
       empty: string;
       pdfLabel: string;
     }> = [
-      { url: photosBySlot[0], col: 16, key: "foto1", empty: "Sin foto", pdfLabel: "PDF" },
-      { url: photosBySlot[1], col: 17, key: "foto2", empty: "Sin foto", pdfLabel: "PDF" },
-      { url: photosBySlot[2], col: 18, key: "foto3", empty: "Sin foto", pdfLabel: "PDF" },
+      { url: photosBySlot[0], col: 26, key: "foto1", empty: "Sin foto", pdfLabel: "PDF" },
+      { url: photosBySlot[1], col: 27, key: "foto2", empty: "Sin foto", pdfLabel: "PDF" },
+      { url: photosBySlot[2], col: 28, key: "foto3", empty: "Sin foto", pdfLabel: "PDF" },
       {
         url: house.comprobanteUrl,
-        col: 19,
+        col: 29,
         key: "comprobanteImg",
         empty: "Sin comprobante",
         pdfLabel: "Ver PDF (enlace en app)",
@@ -185,20 +228,35 @@ export async function buildHousesExcel(houses: HouseExportRow[]): Promise<Buffer
       colonia: house.colonia,
       latitude: house.latitude,
       longitude: house.longitude,
+      mapa: mapLink,
       status: getStatusLabel(status),
       autorizada: house.autorizado ? "Sí" : "No",
+      fechaAutorizacion: house.autorizadoAt
+        ? formatMexicoDateTime(house.autorizadoAt)
+        : "",
+      autorizo: house.autorizadoBy?.name ?? "",
+      autorizoEmail: house.autorizadoBy?.email ?? "",
       expediente: house.expedienteCompleto ? "Sí" : "No",
       comprobante: house.comprobanteUrl ? "Sí" : "No",
+      comprobanteUrl: house.comprobanteUrl ?? "",
       fotosCount: `${house.photos.length}/3`,
+      foto1Url: photosBySlot[0] ?? "",
+      foto2Url: photosBySlot[1] ?? "",
+      foto3Url: photosBySlot[2] ?? "",
       notes: house.notes ?? "",
       capturista: house.createdBy.name,
       email: house.createdBy.email,
-      fecha: house.createdAt.toLocaleString("es-MX"),
+      fecha: formatMexicoDate(house.createdAt),
+      hora: formatMexicoTime(house.createdAt),
+      actualizado: house.updatedAt ? formatMexicoDateTime(house.updatedAt) : "",
       foto1: imageLabels.foto1,
       foto2: imageLabels.foto2,
       foto3: imageLabels.foto3,
       comprobanteImg: imageLabels.comprobanteImg,
     };
+    const mapaCell = row.getCell("mapa");
+    mapaCell.value = { text: mapLink, hyperlink: mapLink };
+    mapaCell.font = { color: { argb: "FF0563C1" }, underline: true };
     row.height = 110;
     row.alignment = { vertical: "middle", wrapText: true };
   }
@@ -209,12 +267,15 @@ export async function buildHousesExcel(houses: HouseExportRow[]): Promise<Buffer
     { header: "Métrica", key: "metric", width: 28 },
     { header: "Valor", key: "value", width: 16 },
   ];
+  const autorizadas = houses.filter((h) => h.autorizado).length;
   resumen.addRow({ metric: "Total casas", value: houses.length });
-  resumen.addRow({ metric: "Completas", value: complete });
-  resumen.addRow({ metric: "Pendientes", value: houses.length - complete });
+  resumen.addRow({ metric: "Autorizadas", value: autorizadas });
+  resumen.addRow({ metric: "Sin autorizar", value: houses.length - autorizadas });
+  resumen.addRow({ metric: "Expediente completo", value: complete });
+  resumen.addRow({ metric: "Expediente pendiente", value: houses.length - complete });
   resumen.addRow({
     metric: "Generado",
-    value: new Date().toLocaleString("es-MX"),
+    value: formatMexicoDateTime(new Date()),
   });
   resumen.getRow(1).font = { bold: true };
 

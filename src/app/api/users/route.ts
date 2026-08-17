@@ -17,10 +17,11 @@ export async function GET() {
       passwordPlain: true,
       role: true,
       active: true,
+      approved: true,
       createdAt: true,
       _count: { select: { houses: true } },
     },
-    orderBy: { createdAt: "desc" },
+    orderBy: [{ approved: "asc" }, { createdAt: "desc" }],
   });
 
   return NextResponse.json({ users });
@@ -50,6 +51,7 @@ export async function POST(request: Request) {
         password: hashed,
         passwordPlain: data.password,
         role: data.role,
+        approved: true,
       },
       select: {
         id: true,
@@ -58,6 +60,7 @@ export async function POST(request: Request) {
         passwordPlain: true,
         role: true,
         active: true,
+        approved: true,
         createdAt: true,
       },
     });

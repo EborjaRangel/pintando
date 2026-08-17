@@ -93,7 +93,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       {canExportExcel(role) && (
         <ExportExcelButton
           scope={excelScopeForRole(role) ?? undefined}
-          label={excelLabelForRole(role)}
+          label={isAdmin(role) ? "Excel" : excelLabelForRole(role)}
+          excelOnly
           className="inline-flex min-h-11 w-full shrink-0 items-center justify-center whitespace-nowrap rounded-lg bg-[var(--wa-green)] px-3 py-2.5 text-sm font-semibold text-[var(--wa-darker)] transition hover:brightness-105 disabled:opacity-60 lg:w-auto"
         />
       )}

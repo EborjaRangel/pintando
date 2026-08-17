@@ -5,6 +5,7 @@ import { requireSession } from "@/lib/api";
 import { buildHousesExcel } from "@/lib/export-houses-excel";
 import { buildHousesHtml } from "@/lib/export-houses-html";
 import {
+  canExportAllExcel,
   canExportAuthorizedExcel,
   canExportTrackingExcel,
   type ExcelExportScope,
@@ -12,8 +13,8 @@ import {
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-/** Conversión de fotos a JPEG + Excel puede tardar con varios registros. */
-export const maxDuration = 60;
+/** Conversión de fotos a PNG + Excel puede tardar con todos los registros. */
+export const maxDuration = 120;
 
 export async function GET(request: Request) {
   const { session, error } = await requireSession();
@@ -32,8 +33,10 @@ export async function GET(request: Request) {
     : null;
 
   let scope: ExcelExportScope;
-  if (scopeParam === "tracking" || scopeParam === "authorized") {
+  if (scopeParam === "tracking" || scopeParam === "authorized" || scopeParam === "all") {
     scope = scopeParam;
+  } else if (canExportAllExcel(role)) {
+    scope = "all";
   } else if (canExportTrackingExcel(role)) {
     scope = "tracking";
   } else if (canExportAuthorizedExcel(role)) {
@@ -59,23 +62,28 @@ export async function GET(request: Request) {
     );
   }
 
-  // Autorización: casas autorizadas de TODOS. Usuario: SOLO las que él levantó.
+  if (scope === "all" && !canExportAllExcel(role)) {
+    return NextResponse.json(
+      { error: "Solo el administrador puede exportar todas las casas" },
+      { status: 403 }
+    );
+  }
+
+  // Admin: todas. Autorización: solo autorizadas. Usuario: las que él levantó.
+  const idFilter = ids?.length ? { id: { in: ids } } : {};
   const where: Prisma.HouseWhereInput =
     scope === "authorized"
-      ? {
-          autorizado: true,
-          ...(ids?.length ? { id: { in: ids } } : {}),
-        }
-      : {
-          createdById: userId,
-          ...(ids?.length ? { id: { in: ids } } : {}),
-        };
+      ? { autorizado: true, ...idFilter }
+      : scope === "all"
+        ? { ...idFilter }
+        : { createdById: userId, ...idFilter };
 
   const houses = await prisma.house.findMany({
     where,
     include: {
       photos: { orderBy: { slot: "asc" }, select: { slot: true, url: true } },
       createdBy: { select: { name: true, email: true } },
+      autorizadoBy: { select: { name: true, email: true } },
     },
     orderBy: { folio: "asc" },
   });
@@ -86,7 +94,9 @@ export async function GET(request: Request) {
         error:
           scope === "authorized"
             ? "No hay casas autorizadas para exportar"
-            : "No tienes casas para exportar",
+            : scope === "all"
+              ? "No hay casas para exportar"
+              : "No tienes casas para exportar",
       },
       { status: 404 }
     );
@@ -101,7 +111,9 @@ export async function GET(request: Request) {
     const filename =
       scope === "authorized"
         ? `pintando-autorizados-${stamp}.html`
-        : `pintando-seguimiento-${stamp}.html`;
+        : scope === "all"
+          ? `pintando-casas-${stamp}.html`
+          : `pintando-seguimiento-${stamp}.html`;
     return new NextResponse(html, {
       status: 200,
       headers: {
@@ -116,7 +128,9 @@ export async function GET(request: Request) {
   const filename =
     scope === "authorized"
       ? `pintando-autorizados-${stamp}.xlsx`
-      : `pintando-seguimiento-${stamp}.xlsx`;
+      : scope === "all"
+        ? `pintando-casas-${stamp}.xlsx`
+        : `pintando-seguimiento-${stamp}.xlsx`;
 
   return new NextResponse(new Uint8Array(buffer), {
     status: 200,

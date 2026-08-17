@@ -24,6 +24,13 @@ export async function PATCH(request: Request, { params }: Params) {
     );
   }
 
+  if (id === session!.user.id && body.approved === false) {
+    return NextResponse.json(
+      { error: "No puedes quitarte la autorización de tu propia cuenta" },
+      { status: 400 }
+    );
+  }
+
   if (id === session!.user.id && body.role && body.role !== "ADMIN") {
     return NextResponse.json(
       { error: "No puedes quitarte el rol de administrador" },
@@ -59,6 +66,7 @@ export async function PATCH(request: Request, { params }: Params) {
     where: { id },
     data: {
       ...(typeof body.active === "boolean" ? { active: body.active } : {}),
+      ...(typeof body.approved === "boolean" ? { approved: body.approved } : {}),
       ...(isAppRole(body.role) ? { role: body.role } : {}),
       ...(passwordUpdate ?? {}),
     },
@@ -69,6 +77,7 @@ export async function PATCH(request: Request, { params }: Params) {
       passwordPlain: true,
       role: true,
       active: true,
+      approved: true,
       createdAt: true,
     },
   });

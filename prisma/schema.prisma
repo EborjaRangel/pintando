@@ -21,10 +21,14 @@ model User {
   passwordPlain    String?
   role             Role     @default(USER)
   active           Boolean  @default(true)
+  /// false = registro público pendiente de autorización del administrador.
+  approved         Boolean  @default(true)
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
   houses           House[]  @relation("HouseCreatedBy")
   housesAuthorized House[]  @relation("HouseAuthorizedBy")
+
+  @@index([approved])
 }
 
 model House {

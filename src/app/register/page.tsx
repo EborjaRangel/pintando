@@ -23,7 +23,9 @@ export default function RegisterPage() {
         <h1 className="font-[family-name:var(--font-display)] text-3xl font-semibold tracking-tight text-[var(--wa-dark)] sm:text-4xl">
           Pintando
         </h1>
-        <p className="mt-2 text-[var(--muted)]">Crea tu cuenta de capturista</p>
+        <p className="mt-2 text-[var(--muted)]">
+          Solicita acceso; un administrador debe autorizarte antes de operar
+        </p>
       </div>
 
       <div className="panel">
@@ -32,37 +34,53 @@ export default function RegisterPage() {
           validationSchema={registerSchema}
           onSubmit={async (values, { setSubmitting }) => {
             setError(null);
-            const res = await fetch("/api/auth/register", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(values),
-            });
-            const data = await res.json();
-            if (!res.ok) {
-              setError(data.error || "No se pudo registrar");
-              setSubmitting(false);
-              return;
-            }
-            await prepareFreshLogin();
-            const login = await signIn("credentials", {
-              email: values.email,
-              password: values.password,
-              redirect: false,
-            });
-            if (login?.error) {
-              router.push("/login");
-            } else {
-              const session = await getSession();
-              if (session?.user?.id && session.user.role) {
-                bindAuthLocalState({
-                  id: session.user.id,
-                  role: session.user.role,
-                  email: session.user.email,
-                });
+            try {
+              const res = await fetch("/api/auth/register", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(values),
+              });
+              const data = await res.json();
+              if (!res.ok) {
+                setError(data.error || "No se pudo registrar");
+                return;
               }
-              window.location.assign("/dashboard");
+
+              // Solo el primer usuario (admin bootstrap) entra de inmediato.
+              if (data.user?.approved) {
+                await prepareFreshLogin();
+                const login = await signIn("credentials", {
+                  email: values.email,
+                  password: values.password,
+                  redirect: false,
+                });
+                if (login?.error) {
+                  router.push("/login");
+                } else {
+                  const session = await getSession();
+                  if (session?.user?.id && session.user.role) {
+                    bindAuthLocalState({
+                      id: session.user.id,
+                      role: session.user.role,
+                      email: session.user.email,
+                    });
+                  }
+                  window.location.assign("/dashboard");
+                }
+                return;
+              }
+
+              router.push(
+                "/login?registered=1&msg=" +
+                  encodeURIComponent(
+                    "Registro realizado. Pendiente de autorización del administrador."
+                  )
+              );
+            } catch {
+              setError("No se pudo registrar");
+            } finally {
+              setSubmitting(false);
             }
-            setSubmitting(false);
           }}
         >
           {({ isSubmitting }) => (
@@ -89,7 +107,7 @@ export default function RegisterPage() {
               </label>
               {error && <p className="error">{error}</p>}
               <button type="submit" disabled={isSubmitting} className="btn-primary w-full">
-                {isSubmitting ? "Creando..." : "Crear cuenta"}
+                {isSubmitting ? "Enviando..." : "Solicitar acceso"}
               </button>
             </Form>
           )}

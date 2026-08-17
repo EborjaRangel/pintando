@@ -66,7 +66,11 @@ export default async function CasasPage() {
           <h1 className="section-title break-words text-2xl sm:text-3xl">Casas</h1>
           <p className="mt-1 max-w-3xl text-sm text-[var(--muted)]">
             {showAll
-              ? `Todas las casas de todos los capturistas · rol ${roleLabel(role)}. Solo se autoriza con 3 fotos, comprobante y expediente completo.`
+              ? `Todas las casas de todos los capturistas · rol ${roleLabel(role)}. Solo se autoriza con 3 fotos, comprobante y expediente completo.${
+                  exportScope === "all"
+                    ? " El Excel incluye todos los registros, sin importar el estatus."
+                    : ""
+                }`
               : "Solo ves las casas que tú levantaste. Tu Excel de seguimiento incluye esas mismas (aunque falten fotos o autorización)."}
           </p>
         </div>

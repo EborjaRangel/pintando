@@ -47,27 +47,29 @@ export default async function DashboardPage() {
         {usersCount !== null && <Stat label="Usuarios" value={usersCount} />}
       </section>
 
-      <section className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-        <Link href="/casas/nueva" className="btn-primary w-full sm:w-auto">
-          Registrar casa
-        </Link>
-        <Link href="/casas/autorizados" className="btn-secondary w-full sm:w-auto">
-          Ver autorizados
-        </Link>
-        <Link href="/mapa" className="btn-secondary w-full sm:w-auto">
-          Ver mapa
-        </Link>
-        <Link href="/casas" className="btn-secondary w-full sm:w-auto">
-          Listado de casas
-        </Link>
-        {canExport && (
-          <ExportExcelButton
-            scope={excelScopeForRole(role) ?? undefined}
-            label={excelLabelForRole(role)}
-            className="inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-[var(--wa-green)] px-4 py-2.5 text-sm font-semibold text-[var(--wa-darker)] transition hover:brightness-105 disabled:opacity-60 sm:w-auto"
-          />
-        )}
-      </section>
+      {!isAdmin(role) && (
+        <section className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+          <Link href="/casas/nueva" className="btn-primary w-full sm:w-auto">
+            Registrar casa
+          </Link>
+          <Link href="/casas/autorizados" className="btn-secondary w-full sm:w-auto">
+            Ver autorizados
+          </Link>
+          <Link href="/mapa" className="btn-secondary w-full sm:w-auto">
+            Ver mapa
+          </Link>
+          <Link href="/casas" className="btn-secondary w-full sm:w-auto">
+            Listado de casas
+          </Link>
+          {canExport && (
+            <ExportExcelButton
+              scope={excelScopeForRole(role) ?? undefined}
+              label={excelLabelForRole(role)}
+              className="inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-[var(--wa-green)] px-4 py-2.5 text-sm font-semibold text-[var(--wa-darker)] transition hover:brightness-105 disabled:opacity-60 sm:w-auto"
+            />
+          )}
+        </section>
+      )}
     </div>
   );
 }

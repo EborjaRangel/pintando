@@ -40,14 +40,24 @@ export function canExportTrackingExcel(role: AppRole | string): boolean {
   return role === "USER";
 }
 
-/** Cualquier rol que pueda bajar Excel. */
-export function canExportExcel(role: AppRole | string): boolean {
-  return canExportAuthorizedExcel(role) || canExportTrackingExcel(role);
+/** Admin: Excel de todas las casas, sin filtrar por estatus. */
+export function canExportAllExcel(role: AppRole | string): boolean {
+  return role === "ADMIN";
 }
 
-export type ExcelExportScope = "authorized" | "tracking";
+/** Cualquier rol que pueda bajar Excel. */
+export function canExportExcel(role: AppRole | string): boolean {
+  return (
+    canExportAuthorizedExcel(role) ||
+    canExportTrackingExcel(role) ||
+    canExportAllExcel(role)
+  );
+}
+
+export type ExcelExportScope = "authorized" | "tracking" | "all";
 
 export function excelScopeForRole(role: AppRole | string): ExcelExportScope | null {
+  if (canExportAllExcel(role)) return "all";
   if (canExportAuthorizedExcel(role)) return "authorized";
   if (canExportTrackingExcel(role)) return "tracking";
   return null;

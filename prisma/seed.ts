@@ -13,37 +13,58 @@ async function main() {
 
   const admin = await prisma.user.upsert({
     where: { email: "admin@pintura.local" },
-    update: { password, passwordPlain: sharedPassword, role: "ADMIN", active: true },
+    update: {
+      password,
+      passwordPlain: sharedPassword,
+      role: "ADMIN",
+      active: true,
+      approved: true,
+    },
     create: {
       name: "Administrador",
       email: "admin@pintura.local",
       password,
       passwordPlain: sharedPassword,
       role: "ADMIN",
+      approved: true,
     },
   });
 
   const user = await prisma.user.upsert({
     where: { email: "usuario@pintura.local" },
-    update: { password, passwordPlain: sharedPassword, role: "USER", active: true },
+    update: {
+      password,
+      passwordPlain: sharedPassword,
+      role: "USER",
+      active: true,
+      approved: true,
+    },
     create: {
       name: "Capturista Demo",
       email: "usuario@pintura.local",
       password,
       passwordPlain: sharedPassword,
       role: "USER",
+      approved: true,
     },
   });
 
   await prisma.user.upsert({
     where: { email: "autorizacion@pintura.local" },
-    update: { password, passwordPlain: sharedPassword, role: "AUTORIZACION", active: true },
+    update: {
+      password,
+      passwordPlain: sharedPassword,
+      role: "AUTORIZACION",
+      active: true,
+      approved: true,
+    },
     create: {
       name: "Autorizador Demo",
       email: "autorizacion@pintura.local",
       password,
       passwordPlain: sharedPassword,
       role: "AUTORIZACION",
+      approved: true,
     },
   });
 

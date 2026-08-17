@@ -7,8 +7,10 @@ type Props = {
   ids?: string[];
   label?: string;
   className?: string;
-  /** authorized = solo autorizadas; tracking = todas las del capturista */
+  /** authorized = solo autorizadas; tracking = las del capturista; all = todas (admin) */
   scope?: ExcelExportScope;
+  /** Solo el botón Excel (sin “Ver listado con fotos”). */
+  excelOnly?: boolean;
 };
 
 type ExportFormat = "html" | "xlsx";
@@ -55,11 +57,18 @@ const defaultExcelClass =
 const defaultHtmlClass =
   "inline-flex min-h-11 w-full items-center justify-center whitespace-nowrap rounded-lg border border-[var(--line)] bg-white px-3 py-2.5 text-sm font-semibold text-[var(--ink)] transition hover:bg-[var(--surface-2)] disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto";
 
+function excelTitle(scope?: ExcelExportScope) {
+  if (scope === "tracking") return "Descarga tu listado de seguimiento en Excel";
+  if (scope === "all") return "Descarga todas las casas en Excel (cualquier estatus)";
+  return "Descarga casas autorizadas en Excel";
+}
+
 export function ExportExcelButton({
   ids,
   label,
   className,
   scope,
+  excelOnly = false,
 }: Props) {
   const [loading, setLoading] = useState<ExportFormat | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -105,7 +114,7 @@ export function ExportExcelButton({
   return (
     <div className="relative w-full lg:w-auto">
       <div className="flex w-full flex-col gap-2 sm:flex-row sm:flex-wrap lg:contents">
-        {showBoth && (
+        {showBoth && !excelOnly && (
           <button
             type="button"
             onClick={() => void download("html")}
@@ -121,11 +130,7 @@ export function ExportExcelButton({
           onClick={() => void download("xlsx")}
           disabled={loading !== null}
           className={excelClass}
-          title={
-            scope === "tracking"
-              ? "Descarga tu listado de seguimiento en Excel"
-              : "Descarga casas autorizadas en Excel"
-          }
+          title={excelTitle(scope)}
         >
           {loading === "xlsx" ? "Generando…" : excelLabel}
         </button>

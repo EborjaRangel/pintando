@@ -3,12 +3,20 @@
 import Link from "next/link";
 import { Formik, Form, Field, ErrorMessage } from "formik";
 import { getSession, signIn } from "next-auth/react";
-import { useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { Suspense, useState } from "react";
 import { bindAuthLocalState, prepareFreshLogin } from "@/lib/auth-client";
 import { loginSchema } from "@/lib/validations";
 
-export default function LoginPage() {
+function LoginForm() {
+  const searchParams = useSearchParams();
   const [error, setError] = useState<string | null>(null);
+  const registered = searchParams.get("registered") === "1";
+  const successMsg =
+    searchParams.get("msg")?.trim() ||
+    (registered
+      ? "Registro realizado. Pendiente de autorización del administrador."
+      : null);
 
   return (
     <div className="relative mx-auto flex min-h-dvh w-full max-w-md flex-col justify-center px-4 py-10 pb-[max(2.5rem,env(safe-area-inset-bottom))]">
@@ -26,6 +34,11 @@ export default function LoginPage() {
 
       <div className="panel">
         <h2 className="mb-4 text-lg font-semibold text-[var(--wa-dark)]">Iniciar sesión</h2>
+        {successMsg && (
+          <p className="mb-4 rounded-lg border border-[var(--wa-teal)]/30 bg-[var(--wa-teal)]/10 px-3 py-2 text-sm text-[var(--wa-dark)]">
+            {successMsg}
+          </p>
+        )}
         <Formik
           initialValues={{ email: "", password: "" }}
           validationSchema={loginSchema}
@@ -40,7 +53,24 @@ export default function LoginPage() {
                 redirect: false,
               });
               if (result?.error) {
-                setError("Correo o contraseña incorrectos");
+                const statusRes = await fetch("/api/auth/login-status", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    email: values.email,
+                    password: values.password,
+                  }),
+                });
+                const statusData = statusRes.ok ? await statusRes.json() : null;
+                if (statusData?.status === "pending") {
+                  setError(
+                    "Tu cuenta aún no ha sido autorizada por un administrador"
+                  );
+                } else if (statusData?.status === "inactive") {
+                  setError("Tu cuenta está desactivada. Contacta al administrador");
+                } else {
+                  setError("Correo o contraseña incorrectos");
+                }
                 return;
               }
               const session = await getSession();
@@ -93,5 +123,19 @@ export default function LoginPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="mx-auto flex min-h-dvh w-full max-w-md items-center justify-center px-4">
+          <p className="text-[var(--muted)]">Cargando…</p>
+        </div>
+      }
+    >
+      <LoginForm />
+    </Suspense>
   );
 }

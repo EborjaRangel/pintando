@@ -112,7 +112,9 @@ export function CasasTable({
               ? `${selected.length} casa(s) seleccionada(s)`
               : exportScope === "tracking"
                 ? "Excel de seguimiento: solo las casas que tú levantaste (completas o no)."
-                : "Excel de autorizadas (todas las de todos los capturistas). Selecciona o baja el listado."}
+                : exportScope === "all"
+                  ? "Excel de todas las casas, sin importar el estatus. Incluye capturista, fecha/hora, georreferencia y fotos."
+                  : "Excel de autorizadas (todas las de todos los capturistas). Selecciona o baja el listado."}
           </p>
           <ExportExcelButton
             scope={exportScope}

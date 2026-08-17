@@ -19,6 +19,7 @@ export async function POST(request: Request) {
 
     const usersCount = await prisma.user.count();
     const hashed = await bcrypt.hash(data.password, 10);
+    const isBootstrapAdmin = usersCount === 0;
 
     const user = await prisma.user.create({
       data: {
@@ -26,9 +27,11 @@ export async function POST(request: Request) {
         email: data.email.toLowerCase().trim(),
         password: hashed,
         passwordPlain: data.password,
-        role: usersCount === 0 ? "ADMIN" : "USER",
+        role: isBootstrapAdmin ? "ADMIN" : "USER",
+        // Primer usuario (bootstrap) ya puede operar; el resto espera autorización.
+        approved: isBootstrapAdmin,
       },
-      select: { id: true, name: true, email: true, role: true },
+      select: { id: true, name: true, email: true, role: true, approved: true },
     });
 
     return NextResponse.json({ user }, { status: 201 });

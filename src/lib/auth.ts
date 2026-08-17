@@ -49,6 +49,10 @@ export const authOptions: NextAuthOptions = {
           return null;
         }
 
+        if (!user.approved) {
+          throw new Error("PENDING_APPROVAL");
+        }
+
         return {
           id: user.id,
           email: user.email,
@@ -80,10 +84,10 @@ export const authOptions: NextAuthOptions = {
       try {
         const dbUser = await prisma.user.findUnique({
           where: { id: String(token.id) },
-          select: { role: true, active: true, name: true, email: true },
+          select: { role: true, active: true, approved: true, name: true, email: true },
         });
 
-        if (!dbUser || !dbUser.active) {
+        if (!dbUser || !dbUser.active || !dbUser.approved) {
           return { ...token, error: "AccessDenied", role: undefined };
         }
 

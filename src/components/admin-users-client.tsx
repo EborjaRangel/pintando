@@ -13,9 +13,15 @@ type UserRow = {
   passwordPlain: string | null;
   role: AppRole;
   active: boolean;
+  approved: boolean;
   createdAt: Date | string;
   _count: { houses: number };
 };
+
+function statusLabel(user: UserRow) {
+  if (!user.approved) return "Pendiente";
+  return user.active ? "Activo" : "Inactivo";
+}
 
 export function AdminUsersClient({
   initialUsers,
@@ -151,8 +157,7 @@ export function AdminUsersClient({
               </button>
             </div>
             <p className="mt-2 text-sm text-[var(--muted)]">
-              {roleLabel(user.role)} · {user._count.houses} casa(s) ·{" "}
-              {user.active ? "Activo" : "Inactivo"}
+              {roleLabel(user.role)} · {user._count.houses} casa(s) · {statusLabel(user)}
             </p>
             <div className="mt-3 grid gap-2">
               <label className="space-y-1">
@@ -180,11 +185,30 @@ export function AdminUsersClient({
                   Quitar autorización
                 </button>
               )}
+              {!user.approved ? (
+                <button
+                  type="button"
+                  className="btn-primary w-full"
+                  onClick={() => patchUser(user.id, { approved: true, active: true })}
+                  disabled={user.id === currentUserId}
+                >
+                  Autorizar acceso
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="btn-secondary w-full"
+                  onClick={() => patchUser(user.id, { approved: false })}
+                  disabled={user.id === currentUserId}
+                >
+                  Revocar autorización
+                </button>
+              )}
               <button
                 type="button"
                 className="btn-secondary w-full"
                 onClick={() => patchUser(user.id, { active: !user.active })}
-                disabled={user.id === currentUserId}
+                disabled={user.id === currentUserId || !user.approved}
               >
                 {user.active ? "Desactivar" : "Activar"}
               </button>
@@ -248,7 +272,19 @@ export function AdminUsersClient({
                   </select>
                 </td>
                 <td className="px-4 py-3">{user._count.houses}</td>
-                <td className="px-4 py-3">{user.active ? "Activo" : "Inactivo"}</td>
+                <td className="px-4 py-3">
+                  <span
+                    className={
+                      !user.approved
+                        ? "font-medium text-amber-700"
+                        : user.active
+                          ? "text-[var(--ink)]"
+                          : "text-[var(--muted)]"
+                    }
+                  >
+                    {statusLabel(user)}
+                  </span>
+                </td>
                 <td className="px-4 py-3">
                   <div className="flex flex-wrap gap-2">
                     {user.role === "AUTORIZACION" && (
@@ -261,11 +297,30 @@ export function AdminUsersClient({
                         Quitar autorización
                       </button>
                     )}
+                    {!user.approved ? (
+                      <button
+                        type="button"
+                        className="inline-flex min-h-11 items-center rounded-lg bg-[var(--wa-teal)] px-3 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
+                        onClick={() => patchUser(user.id, { approved: true, active: true })}
+                        disabled={user.id === currentUserId}
+                      >
+                        Autorizar acceso
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        className="inline-flex min-h-11 items-center rounded-lg border border-[var(--line)] px-3 py-2 text-sm font-medium text-[var(--accent-ink)] hover:bg-[var(--surface-2)] disabled:opacity-50"
+                        onClick={() => patchUser(user.id, { approved: false })}
+                        disabled={user.id === currentUserId}
+                      >
+                        Revocar autorización
+                      </button>
+                    )}
                     <button
                       type="button"
                       className="inline-flex min-h-11 items-center rounded-lg border border-[var(--line)] px-3 py-2 text-sm font-medium text-[var(--accent-ink)] hover:bg-[var(--surface-2)] disabled:opacity-50"
                       onClick={() => patchUser(user.id, { active: !user.active })}
-                      disabled={user.id === currentUserId}
+                      disabled={user.id === currentUserId || !user.approved}
                     >
                       {user.active ? "Desactivar" : "Activar"}
                     </button>

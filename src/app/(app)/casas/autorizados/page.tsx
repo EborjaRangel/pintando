@@ -56,7 +56,7 @@ export default async function AutorizadosPage() {
           <h1 className="section-title break-words text-2xl sm:text-3xl">Autorizados</h1>
           <p className="mt-1 max-w-3xl text-sm text-[var(--muted)]">
             {showAll
-              ? "Casas autorizadas de todo el equipo. Solo estas salen en Excel."
+              ? "Casas autorizadas de todo el equipo."
               : "Solo las casas autorizadas que tú levantaste."}
           </p>
         </div>
