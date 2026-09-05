@@ -80,6 +80,7 @@ async function main() {
       data: {
         address: "Calle Francisco Sosa 123",
         colonia: "Villa Coyoacán",
+        consecutivo: 1,
         latitude: 19.3492,
         longitude: -99.1648,
         comprobanteUrl: "/uploads/comprobantes/demo.svg",
@@ -100,6 +101,7 @@ async function main() {
       data: {
         address: "Av. Universidad 450",
         colonia: "Copilco Universidad",
+        consecutivo: 1,
         latitude: 19.3345,
         longitude: -99.1855,
         comprobanteUrl: null,

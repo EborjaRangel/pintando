@@ -11,7 +11,7 @@
     "dev:db": "prisma dev --name default",
     "build": "prisma generate && next build",
     "build:with-db": "prisma generate && prisma db push && next build",
-    "db:deploy": "prisma db push",
+    "db:deploy": "node scripts/ensure-consecutivo.mjs && prisma db push",
     "start": "next start --hostname 0.0.0.0",
     "lint": "eslint",
     "db:generate": "prisma generate",

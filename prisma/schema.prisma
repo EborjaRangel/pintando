@@ -34,6 +34,8 @@ model User {
 model House {
   id                 String    @id @default(cuid())
   folio              Int       @unique @default(autoincrement())
+  /// Consecutivo por colonia (1…n), según fecha/hora de levantamiento.
+  consecutivo        Int       @default(0)
   address            String
   colonia            String
   latitude           Float
@@ -51,6 +53,7 @@ model House {
   autorizadoBy       User?     @relation("HouseAuthorizedBy", fields: [autorizadoById], references: [id], onDelete: SetNull)
   photos             Photo[]
 
+  @@unique([colonia, consecutivo])
   @@index([colonia])
   @@index([createdById])
   @@index([folio])

@@ -17,7 +17,15 @@ export type AnyMap = {
   flyTo: (options: unknown) => void;
   isStyleLoaded: () => boolean;
   once: (type: string, listener: (...args: unknown[]) => void) => unknown;
+  off: (...args: unknown[]) => unknown;
+  project: (lngLat: [number, number]) => { x: number; y: number };
   addControl: (control: unknown, position?: string) => void;
+  getZoom?: () => number;
+  queryRenderedFeatures?: (
+    point: { x: number; y: number },
+    options?: { layers?: string[] }
+  ) => Array<{ properties?: Record<string, unknown> }>;
+  setFilter?: (id: string, filter: unknown) => void;
 };
 
 export type RawMap = MapboxMap | MapLibreMap;

@@ -15,6 +15,7 @@ import { formatFolio } from "@/lib/folio";
 export type CasaRow = {
   id: string;
   folio: number;
+  consecutivo: number;
   address: string;
   colonia: string;
   colorName?: string | null;
@@ -161,6 +162,9 @@ export function CasasTable({
               )}
               <div className="min-w-0 flex-1 space-y-2">
                 <div className="flex flex-wrap items-center gap-2">
+                  <p className="inline-flex h-8 min-w-8 items-center justify-center rounded-full bg-[var(--wa-teal)] px-2 text-sm font-bold text-white">
+                    {house.consecutivo}
+                  </p>
                   <p className="font-[family-name:var(--font-display)] text-sm font-semibold text-[var(--wa-teal)]">
                     {formatFolio(house.folio)}
                   </p>
@@ -228,6 +232,7 @@ export function CasasTable({
                   </label>
                 </th>
               )}
+              <th className="px-4 py-3 font-medium">N.º</th>
               <th className="px-4 py-3 font-medium">Folio</th>
               <th className="px-4 py-3 font-medium">Dirección</th>
               <th className="px-4 py-3 font-medium">Colonia</th>
@@ -256,6 +261,11 @@ export function CasasTable({
                     </label>
                   </td>
                 )}
+                <td className="whitespace-nowrap px-4 py-3">
+                  <span className="inline-flex h-8 min-w-8 items-center justify-center rounded-full bg-[var(--wa-teal)] px-2 text-sm font-bold text-white">
+                    {house.consecutivo}
+                  </span>
+                </td>
                 <td className="whitespace-nowrap px-4 py-3 font-semibold text-[var(--wa-teal)]">
                   {formatFolio(house.folio)}
                 </td>

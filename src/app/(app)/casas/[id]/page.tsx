@@ -16,6 +16,7 @@ import { formatFolio } from "@/lib/folio";
 import { canAccessHouse } from "@/lib/house-access";
 import { canAuthorizeHouses, canRevokeAuthorization } from "@/lib/roles";
 import { AuthorizeHouseButton } from "@/components/authorize-house-button";
+import { loadConsecutivosById } from "@/lib/consecutivo";
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -33,6 +34,9 @@ export default async function CasaDetallePage({ params }: Props) {
   });
 
   if (!house) notFound();
+
+  const consecutivos = await loadConsecutivosById(prisma);
+  const consecutivo = Number(consecutivos.get(house.id) ?? house.consecutivo) || 0;
 
   if (
     !canAccessHouse({
@@ -62,7 +66,7 @@ export default async function CasaDetallePage({ params }: Props) {
             ← Volver al listado
           </Link>
           <p className="font-[family-name:var(--font-display)] text-sm font-semibold tracking-wide text-[var(--wa-teal)]">
-            Folio {formatFolio(house.folio)}
+            Folio {formatFolio(house.folio)} · Consecutivo {consecutivo}
           </p>
           <h1 className="section-title break-words text-2xl sm:text-3xl">{house.address}</h1>
           <p className="break-words text-sm text-[var(--muted)] sm:text-base">
@@ -147,6 +151,7 @@ export default async function CasaDetallePage({ params }: Props) {
           mode="edit"
           houseId={house.id}
           folio={house.folio}
+          consecutivo={consecutivo}
           initialValues={{
             address: house.address,
             colonia: house.colonia,

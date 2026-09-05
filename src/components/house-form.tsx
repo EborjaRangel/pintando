@@ -29,6 +29,7 @@ type Props = {
   initialValues?: Partial<HouseFormValues>;
   houseId?: string;
   folio?: number;
+  consecutivo?: number;
   mode?: "create" | "edit";
 };
 
@@ -40,6 +41,35 @@ const defaults: HouseFormValues = {
   notes: PALETA_COLORES[0].name,
   expedienteCompleto: false,
 };
+
+function ConsecutivoPreview({ colonia }: { colonia: string }) {
+  const [label, setLabel] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!colonia) {
+      setLabel(null);
+      return;
+    }
+    let cancelled = false;
+    void fetch(`/api/houses/next-consecutivo?colonia=${encodeURIComponent(colonia)}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data: { label?: string } | null) => {
+        if (!cancelled) setLabel(data?.label ?? null);
+      })
+      .catch(() => {
+        if (!cancelled) setLabel(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [colonia]);
+
+  return (
+    <p className="mt-1 font-[family-name:var(--font-display)] text-xl font-semibold text-[var(--wa-dark)]">
+      {label ?? "—"}
+    </p>
+  );
+}
 
 async function uploadAttachments(houseId: string, attachments: DraftAttachments) {
   for (let i = 0; i < 3; i++) {
@@ -55,7 +85,13 @@ async function uploadAttachments(houseId: string, attachments: DraftAttachments)
   }
 }
 
-export function HouseForm({ initialValues, houseId, folio, mode = "create" }: Props) {
+export function HouseForm({
+  initialValues,
+  houseId,
+  folio,
+  consecutivo,
+  mode = "create",
+}: Props) {
   const router = useRouter();
   const [serverError, setServerError] = useState<string | null>(null);
   const [statusText, setStatusText] = useState<string | null>(null);
@@ -120,24 +156,50 @@ export function HouseForm({ initialValues, houseId, folio, mode = "create" }: Pr
     >
       {({ values, setFieldValue, isSubmitting }) => (
         <Form className="space-y-6">
-          <div className="rounded-lg border border-[var(--wa-light)] bg-[var(--wa-light)]/40 px-4 py-3">
-            <p className="text-xs font-semibold uppercase tracking-wide text-[var(--wa-teal)]">
-              Folio
-            </p>
-            {mode === "edit" && folio != null ? (
-              <p className="mt-1 font-[family-name:var(--font-display)] text-xl font-semibold text-[var(--wa-dark)]">
-                {formatFolio(folio)}
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="rounded-lg border border-[var(--wa-light)] bg-[var(--wa-light)]/40 px-4 py-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-[var(--wa-teal)]">
+                Folio
               </p>
-            ) : (
-              <>
+              {mode === "edit" && folio != null ? (
                 <p className="mt-1 font-[family-name:var(--font-display)] text-xl font-semibold text-[var(--wa-dark)]">
-                  {nextFolioLabel ?? "PC-······"}
+                  {formatFolio(folio)}
                 </p>
-                <p className="mt-1 text-xs text-[var(--muted)]">
-                  Se asigna automáticamente al guardar. Es único y no se puede repetir.
-                </p>
-              </>
-            )}
+              ) : (
+                <>
+                  <p className="mt-1 font-[family-name:var(--font-display)] text-xl font-semibold text-[var(--wa-dark)]">
+                    {nextFolioLabel ?? "PC-······"}
+                  </p>
+                  <p className="mt-1 text-xs text-[var(--muted)]">
+                    Único en todo el programa. Se asigna al guardar.
+                  </p>
+                </>
+              )}
+            </div>
+            <div className="rounded-lg border border-[var(--wa-light)] bg-[var(--wa-light)]/40 px-4 py-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-[var(--wa-teal)]">
+                Consecutivo por colonia
+              </p>
+              {mode === "edit" &&
+              consecutivo != null &&
+              values.colonia === (initialValues?.colonia ?? values.colonia) ? (
+                <>
+                  <p className="mt-1 font-[family-name:var(--font-display)] text-xl font-semibold text-[var(--wa-dark)]">
+                    {consecutivo}
+                  </p>
+                  <p className="mt-1 text-xs text-[var(--muted)]">
+                    {values.colonia}. Si cambias de colonia se asigna uno nuevo.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <ConsecutivoPreview colonia={values.colonia} />
+                  <p className="mt-1 text-xs text-[var(--muted)]">
+                    Número 1, 2, 3… de {values.colonia || "la colonia"}. Se asigna al guardar.
+                  </p>
+                </>
+              )}
+            </div>
           </div>
 
           <fieldset className="space-y-3">

@@ -6,6 +6,11 @@ import { getHouseStatus } from "@/lib/house-status";
 import { yupErrorDetails } from "@/lib/yup-error";
 import { canAccessHouse } from "@/lib/house-access";
 import { sanitizeCdmxAddress } from "@/lib/mapbox-geocode";
+import {
+  findDuplicateHouse,
+  nextConsecutivoForColonia,
+  withConsecutivoRetry,
+} from "@/lib/consecutivo";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -69,21 +74,43 @@ export async function PUT(request: Request, { params }: Params) {
     const body = await request.json();
     const data = await houseSchema.validate(body, { abortEarly: false });
 
-    const updated = await prisma.house.update({
-      where: { id },
-      data: {
-        address: sanitizeCdmxAddress(data.address),
-        colonia: data.colonia,
-        latitude: data.latitude,
-        longitude: data.longitude,
-        notes: data.notes?.trim() || null,
-        expedienteCompleto: data.expedienteCompleto,
-      },
-      include: {
-        photos: { orderBy: { slot: "asc" } },
-        createdBy: { select: { id: true, name: true, email: true } },
-      },
-    });
+    const address = sanitizeCdmxAddress(data.address);
+    const duplicate = await findDuplicateHouse(prisma, data.colonia, address, id);
+    if (duplicate) {
+      return NextResponse.json(
+        {
+          error: `Esa dirección ya está capturada en ${data.colonia} (consecutivo ${duplicate.consecutivo}). No se puede repetir.`,
+          houseId: duplicate.id,
+        },
+        { status: 409 }
+      );
+    }
+
+    const updated = await withConsecutivoRetry(() =>
+      prisma.$transaction(async (tx) => {
+        const coloniaChanged = data.colonia !== house.colonia;
+        const consecutivo = coloniaChanged
+          ? await nextConsecutivoForColonia(tx, data.colonia)
+          : house.consecutivo;
+
+        return tx.house.update({
+          where: { id },
+          data: {
+            address,
+            colonia: data.colonia,
+            consecutivo,
+            latitude: data.latitude,
+            longitude: data.longitude,
+            notes: data.notes?.trim() || null,
+            expedienteCompleto: data.expedienteCompleto,
+          },
+          include: {
+            photos: { orderBy: { slot: "asc" } },
+            createdBy: { select: { id: true, name: true, email: true } },
+          },
+        });
+      })
+    );
 
     return NextResponse.json({
       house: { ...updated, status: getHouseStatus(updated) },

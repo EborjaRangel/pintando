@@ -6,7 +6,7 @@ export default function NuevaCasaPage() {
       <div>
         <h1 className="section-title text-2xl sm:text-3xl">Nueva casa</h1>
         <p className="mt-1 text-sm text-[var(--muted)]">
-          El folio se asigna solo al guardar. Captura ubicación, colores, fotos y comprobante.
+          El folio y el consecutivo por colonia se asignan al guardar. Captura ubicación, colores, fotos y comprobante.
         </p>
       </div>
       <div className="panel">

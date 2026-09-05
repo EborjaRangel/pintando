@@ -73,11 +73,11 @@ export async function buildHousesHtml(houses: HouseExportRow[]): Promise<string>
     cards.push(`
       <article class="card">
         <header>
-          <h2>${escapeHtml(formatFolio(house.folio))}</h2>
+          <h2>${escapeHtml(formatFolio(house.folio))} · N.º ${house.consecutivo}</h2>
           <p class="status">${escapeHtml(status)}${house.autorizado ? " · Autorizada" : ""}</p>
         </header>
         <p class="addr">${escapeHtml(house.address)}</p>
-        <p class="meta">${escapeHtml(house.colonia)} · Capturista: ${escapeHtml(house.createdBy.name)}</p>
+        <p class="meta">${escapeHtml(house.colonia)} · Consecutivo ${house.consecutivo} · Capturista: ${escapeHtml(house.createdBy.name)}</p>
         <p class="meta">Levantada: ${escapeHtml(house.createdAt.toLocaleString("es-MX", { timeZone: "America/Mexico_City" }))}</p>
         <p class="meta">Georreferencia: ${house.latitude}, ${house.longitude} · <a href="https://www.google.com/maps?q=${house.latitude},${house.longitude}" target="_blank" rel="noopener">Ver mapa</a></p>
         ${house.notes ? `<p class="notes">${escapeHtml(house.notes)}</p>` : ""}

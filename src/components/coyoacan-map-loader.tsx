@@ -25,6 +25,8 @@ export function CoyoacanMapLoader({
       properties: {
         id: string;
         folio: string;
+        consecutivo: number;
+        consecutivoLabel?: string;
         address: string;
         colonia: string;
         status: "complete" | "incomplete";

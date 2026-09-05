@@ -7,6 +7,7 @@ import { getColorsFromNotes } from "@/lib/paleta-colores";
 import { CasasTable } from "@/components/casas-table";
 import { ExportExcelButton } from "@/components/export-excel-button";
 import { housesWhereForRole } from "@/lib/house-access";
+import { loadConsecutivosById } from "@/lib/consecutivo";
 import {
   canAuthorizeHouses,
   canRevokeAuthorization,
@@ -30,12 +31,14 @@ export default async function CasasPage() {
     },
     orderBy: { folio: "desc" },
   });
+  const consecutivos = await loadConsecutivosById(prisma);
 
   const rows = houses.map((house) => {
     const colors = getColorsFromNotes(house.notes);
     return {
       id: house.id,
       folio: house.folio,
+      consecutivo: consecutivos.get(house.id) || Number(house.consecutivo) || 0,
       address: house.address,
       colonia: house.colonia,
       colorName: colors.length

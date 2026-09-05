@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/api";
 import { getHouseStatus, getMapMarkerColor } from "@/lib/house-status";
 import { housesWhereForRole } from "@/lib/house-access";
+import { formatFolio } from "@/lib/folio";
+import { loadConsecutivosById } from "@/lib/consecutivo";
 
 export async function GET() {
   const { session, error } = await requireSession();
@@ -16,8 +18,11 @@ export async function GET() {
     },
   });
 
+  const consecutivos = await loadConsecutivosById(prisma);
+
   const features = houses.map((house) => {
     const status = getHouseStatus(house);
+    const consecutivo = Number(consecutivos.get(house.id) ?? house.consecutivo) || 0;
     return {
       type: "Feature" as const,
       geometry: {
@@ -26,6 +31,9 @@ export async function GET() {
       },
       properties: {
         id: house.id,
+        folio: formatFolio(house.folio),
+        consecutivo,
+        consecutivoLabel: String(consecutivo),
         address: house.address,
         colonia: house.colonia,
         status,

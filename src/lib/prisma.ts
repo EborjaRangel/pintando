@@ -141,7 +141,13 @@ function wrapDelegate(getDelegate: () => Delegate): Delegate {
  */
 export const prisma = new Proxy({} as PrismaClient, {
   get(_target, prop) {
-    if (prop === "$connect" || prop === "$disconnect" || prop === "$transaction") {
+    if (
+      prop === "$connect" ||
+      prop === "$disconnect" ||
+      prop === "$transaction" ||
+      prop === "$queryRaw" ||
+      prop === "$executeRaw"
+    ) {
       return (...args: unknown[]) =>
         withRetry(() => {
           const client = getClient();

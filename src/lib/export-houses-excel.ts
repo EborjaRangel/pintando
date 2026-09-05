@@ -12,6 +12,7 @@ const IMAGE_HEIGHT_PX = 90;
 export type HouseExportRow = {
   id: string;
   folio: number;
+  consecutivo: number;
   address: string;
   colonia: string;
   latitude: number;
@@ -118,6 +119,7 @@ export async function buildHousesExcel(houses: HouseExportRow[]): Promise<Buffer
 
   sheet.columns = [
     { header: "Folio", key: "folio", width: 12 },
+    { header: "Consecutivo colonia", key: "consecutivo", width: 16 },
     { header: "ID", key: "id", width: 28 },
     { header: "Dirección", key: "address", width: 42 },
     { header: "Colonia", key: "colonia", width: 28 },
@@ -169,7 +171,7 @@ export async function buildHousesExcel(houses: HouseExportRow[]): Promise<Buffer
     const row = sheet.getRow(rowIndex);
     const mapLink = mapsUrl(house.latitude, house.longitude);
 
-    // Columnas de imagen: Foto1=26, Foto2=27, Foto3=28, Comprobante=29 (1-based)
+    // Columnas de imagen: Foto1=27, Foto2=28, Foto3=29, Comprobante=30 (1-based)
     const imageSlots: Array<{
       url: string | null;
       col: number;
@@ -177,12 +179,12 @@ export async function buildHousesExcel(houses: HouseExportRow[]): Promise<Buffer
       empty: string;
       pdfLabel: string;
     }> = [
-      { url: photosBySlot[0], col: 26, key: "foto1", empty: "Sin foto", pdfLabel: "PDF" },
-      { url: photosBySlot[1], col: 27, key: "foto2", empty: "Sin foto", pdfLabel: "PDF" },
-      { url: photosBySlot[2], col: 28, key: "foto3", empty: "Sin foto", pdfLabel: "PDF" },
+      { url: photosBySlot[0], col: 27, key: "foto1", empty: "Sin foto", pdfLabel: "PDF" },
+      { url: photosBySlot[1], col: 28, key: "foto2", empty: "Sin foto", pdfLabel: "PDF" },
+      { url: photosBySlot[2], col: 29, key: "foto3", empty: "Sin foto", pdfLabel: "PDF" },
       {
         url: house.comprobanteUrl,
-        col: 29,
+        col: 30,
         key: "comprobanteImg",
         empty: "Sin comprobante",
         pdfLabel: "Ver PDF (enlace en app)",
@@ -223,6 +225,7 @@ export async function buildHousesExcel(houses: HouseExportRow[]): Promise<Buffer
 
     row.values = {
       folio: formatFolio(house.folio),
+      consecutivo: house.consecutivo,
       id: house.id,
       address: house.address,
       colonia: house.colonia,

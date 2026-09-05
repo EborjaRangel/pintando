@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import type { FeatureCollection } from "geojson";
 import { CENTRO_COYOACAN, MAPBOX_TOKEN, mapboxConfigError } from "@/lib/mapbox-config";
 import { initBasemap, type AnyMap } from "@/lib/init-map";
+import { normalizeColoniaKey } from "@/lib/colonias";
 
 type HouseFeature = {
   type: "Feature";
@@ -12,6 +13,8 @@ type HouseFeature = {
   properties: {
     id: string;
     folio: string;
+    consecutivo: number;
+    consecutivoLabel?: string;
     address: string;
     colonia: string;
     status: "complete" | "incomplete";
@@ -96,55 +99,117 @@ function boundsFromCollection(collection: FeatureCollection): LngLatBoundsLike |
   ];
 }
 
-type TooltipState = { x: number; y: number; colonia: string };
+function houseConsecutivo(feature: HouseFeature): number {
+  const raw = feature.properties.consecutivo ?? feature.properties.consecutivoLabel;
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function featureName(feature: GeoJSON.Feature | undefined): string {
+  return String(feature?.properties?.name ?? "");
+}
 
 export function CoyoacanMap({ houses }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<AnyMap | null>(null);
-  const housesDataRef = useRef(houses);
+  const coloniasGeoRef = useRef<FeatureCollection | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [provider, setProvider] = useState<"mapbox" | "maplibre" | null>(null);
   const [filter, setFilter] = useState<"all" | "authorized" | "complete" | "incomplete">("all");
-  const [tooltip, setTooltip] = useState<TooltipState | null>(null);
+  const [coloniaKey, setColoniaKey] = useState<string | null>(null);
   const [selectedHouseId, setSelectedHouseId] = useState<string | null>(null);
+  const [mapVersion, setMapVersion] = useState(0);
+  const overlayRef = useRef<HTMLDivElement>(null);
+  const balloonElsRef = useRef(new Map<string, HTMLButtonElement>());
+  const tooltipRef = useRef<HTMLDivElement>(null);
+  const tooltipLabelRef = useRef<HTMLParagraphElement>(null);
+  const placeTooltipRef = useRef<(x: number, y: number, colonia: string) => void>(() => {});
+
+  placeTooltipRef.current = (x, y, colonia) => {
+    const box = tooltipRef.current;
+    const label = tooltipLabelRef.current;
+    if (!box || !label) return;
+    label.textContent = colonia;
+    const width = overlayRef.current?.clientWidth ?? containerRef.current?.clientWidth ?? 320;
+    box.style.display = "block";
+    box.style.left = `${Math.min(x + 12, width - 120)}px`;
+    box.style.top = `${Math.max(8, y - 40)}px`;
+  };
+
+  function hideTooltip() {
+    const box = tooltipRef.current;
+    if (box) box.style.display = "none";
+  }
+
+  const activeColoniaKey = coloniaKey;
+  const showConsecutivoNumbers = Boolean(coloniaKey);
+
+  const coloniaOptions = useMemo(() => {
+    const names = new Set<string>();
+    for (const feature of houses.features) names.add(feature.properties.colonia);
+    return [...names].sort((a, b) => a.localeCompare(b, "es"));
+  }, [houses]);
+
+  const scopedHouses = useMemo(() => {
+    if (!activeColoniaKey) return houses.features;
+    return houses.features.filter(
+      (feature) => normalizeColoniaKey(feature.properties.colonia) === activeColoniaKey
+    );
+  }, [activeColoniaKey, houses]);
 
   const filtered = useMemo(() => {
-    if (filter === "all") return houses;
-    if (filter === "authorized") {
-      return {
-        type: "FeatureCollection" as const,
-        features: houses.features.filter((f) => f.properties.autorizado),
-      };
-    }
-    return {
-      type: "FeatureCollection" as const,
-      features: houses.features.filter(
-        (f) => !f.properties.autorizado && f.properties.status === filter
-      ),
-    };
-  }, [filter, houses]);
-
-  housesDataRef.current = filtered;
+    const features =
+      filter === "all"
+        ? scopedHouses
+        : filter === "authorized"
+          ? scopedHouses.filter((feature) => feature.properties.autorizado)
+          : scopedHouses.filter(
+              (feature) =>
+                !feature.properties.autorizado && feature.properties.status === filter
+            );
+    return { type: "FeatureCollection" as const, features };
+  }, [filter, scopedHouses]);
 
   const stats = useMemo(() => {
-    const authorized = houses.features.filter((f) => f.properties.autorizado).length;
-    const complete = houses.features.filter(
-      (f) => !f.properties.autorizado && f.properties.status === "complete"
+    const authorized = scopedHouses.filter((feature) => feature.properties.autorizado).length;
+    const complete = scopedHouses.filter(
+      (feature) => !feature.properties.autorizado && feature.properties.status === "complete"
     ).length;
-    const incomplete = houses.features.filter(
-      (f) => !f.properties.autorizado && f.properties.status === "incomplete"
+    const incomplete = scopedHouses.filter(
+      (feature) => !feature.properties.autorizado && feature.properties.status === "incomplete"
     ).length;
     return {
       authorized,
       complete,
       incomplete,
-      total: houses.features.length,
+      total: scopedHouses.length,
     };
-  }, [houses]);
+  }, [scopedHouses]);
+
+  const activeColoniaLabel = useMemo(() => {
+    if (!activeColoniaKey) return null;
+    const house = houses.features.find(
+      (feature) => normalizeColoniaKey(feature.properties.colonia) === activeColoniaKey
+    );
+    if (house) return house.properties.colonia;
+    const geo = coloniasGeoRef.current?.features.find(
+      (feature) => normalizeColoniaKey(featureName(feature)) === activeColoniaKey
+    );
+    return featureName(geo) || null;
+  }, [activeColoniaKey, houses]);
 
   const selectedHouse =
-    filtered.features.find((f) => f.properties.id === selectedHouseId) ?? null;
+    filtered.features.find((feature) => feature.properties.id === selectedHouseId) ?? null;
+
+  useEffect(() => {
+    if (
+      selectedHouseId &&
+      !filtered.features.some((feature) => feature.properties.id === selectedHouseId)
+    ) {
+      setSelectedHouseId(null);
+    }
+  }, [filtered, selectedHouseId]);
 
   useEffect(() => {
     const configError = mapboxConfigError();
@@ -173,6 +238,7 @@ export function CoyoacanMap({ houses }: Props) {
           : null;
 
         if (cancelled || !containerRef.current) return;
+        coloniasGeoRef.current = colonias;
 
         dispose = await initBasemap({
           container: containerRef.current,
@@ -187,9 +253,9 @@ export function CoyoacanMap({ houses }: Props) {
             setProvider(usedProvider);
 
             for (const id of [
-              "houses-circle",
               "colonias-line",
               "colonias-fill",
+              "colonias-fill-active",
               "colonias-label",
               "secciones-line",
               "secciones-fill",
@@ -227,6 +293,13 @@ export function CoyoacanMap({ houses }: Props) {
               paint: { "fill-color": "#128C7E", "fill-opacity": 0.12 },
             });
             map.addLayer({
+              id: "colonias-fill-active",
+              type: "fill",
+              source: "colonias",
+              filter: ["==", ["get", "name"], "__none__"],
+              paint: { "fill-color": "#128C7E", "fill-opacity": 0.32 },
+            });
+            map.addLayer({
               id: "colonias-line",
               type: "line",
               source: "colonias",
@@ -249,27 +322,6 @@ export function CoyoacanMap({ houses }: Props) {
               },
             });
 
-            map.addSource("houses", { type: "geojson", data: housesDataRef.current });
-            map.addLayer({
-              id: "houses-circle",
-              type: "circle",
-              source: "houses",
-              paint: {
-                "circle-radius": [
-                  "interpolate",
-                  ["linear"],
-                  ["zoom"],
-                  11,
-                  10,
-                  14,
-                  14,
-                ],
-                "circle-color": ["get", "color"],
-                "circle-stroke-width": 2,
-                "circle-stroke-color": "#ffffff",
-              },
-            });
-
             const coarse =
               typeof window !== "undefined" &&
               window.matchMedia("(pointer: coarse)").matches;
@@ -282,37 +334,21 @@ export function CoyoacanMap({ houses }: Props) {
                 const colonia = String(event.features?.[0]?.properties?.name ?? "");
                 if (!colonia) return;
                 map.getCanvas().style.cursor = "pointer";
-                setTooltip({ x: event.point.x, y: event.point.y, colonia });
+                placeTooltipRef.current(event.point.x, event.point.y, colonia);
               });
               map.on("mouseleave", "colonias-fill", () => {
                 map.getCanvas().style.cursor = "";
-                setTooltip(null);
+                hideTooltip();
               });
             }
 
             map.on("click", "colonias-fill", (event: {
               features?: Array<{ properties?: Record<string, unknown> }>;
-              point: { x: number; y: number };
             }) => {
               const colonia = String(event.features?.[0]?.properties?.name ?? "");
               if (!colonia) return;
-              setTooltip({ x: event.point.x, y: event.point.y, colonia });
-            });
-
-            map.on("click", "houses-circle", (event: {
-              features?: Array<{ properties?: Record<string, unknown> }>;
-            }) => {
-              const id = String(event.features?.[0]?.properties?.id ?? "");
-              if (id) {
-                setTooltip(null);
-                setSelectedHouseId(id);
-              }
-            });
-            map.on("mouseenter", "houses-circle", () => {
-              map.getCanvas().style.cursor = "pointer";
-            });
-            map.on("mouseleave", "houses-circle", () => {
-              map.getCanvas().style.cursor = "";
+              setColoniaKey(normalizeColoniaKey(colonia));
+              hideTooltip();
             });
 
             const narrow = typeof window !== "undefined" && window.innerWidth < 640;
@@ -328,6 +364,7 @@ export function CoyoacanMap({ houses }: Props) {
             }
 
             setLoading(false);
+            setMapVersion((n) => n + 1);
             if (usedProvider === "mapbox") setError(null);
           },
         });
@@ -351,59 +388,151 @@ export function CoyoacanMap({ houses }: Props) {
 
   useEffect(() => {
     const map = mapRef.current;
-    if (!map) return;
-    const source = map.getSource("houses") as { setData?: (data: unknown) => void } | undefined;
-    source?.setData?.(filtered);
-  }, [filtered]);
+    if (!map?.setFilter) return;
+    const feature = activeColoniaKey
+      ? coloniasGeoRef.current?.features.find(
+          (item) => normalizeColoniaKey(featureName(item)) === activeColoniaKey
+        )
+      : undefined;
+    map.setFilter("colonias-fill-active", [
+      "==",
+      ["get", "name"],
+      featureName(feature) || "__none__",
+    ]);
+  }, [activeColoniaKey, mapVersion]);
+
+  useEffect(() => {
+    if (!coloniaKey) return;
+    const map = mapRef.current;
+    const geo = coloniasGeoRef.current;
+    if (!map || !geo) return;
+    const feature = geo.features.find(
+      (item) => normalizeColoniaKey(featureName(item)) === coloniaKey
+    );
+    const bounds = boundsFromGeometry(feature?.geometry);
+    if (!bounds) return;
+    map.fitBounds(bounds, { padding: 48, maxZoom: 15.5, duration: 450 });
+  }, [coloniaKey, mapVersion]);
+
+  useLayoutEffect(() => {
+    const map = mapRef.current;
+    if (!map?.project) return;
+
+    let raf = 0;
+    const sync = () => {
+      const width = overlayRef.current?.clientWidth ?? containerRef.current?.clientWidth ?? 0;
+      const height = overlayRef.current?.clientHeight ?? containerRef.current?.clientHeight ?? 0;
+      for (const feature of filtered.features) {
+        const el = balloonElsRef.current.get(feature.properties.id);
+        if (!el) continue;
+        const point = map.project(feature.geometry.coordinates);
+        const off =
+          point.x < -48 ||
+          point.y < -48 ||
+          point.x > width + 48 ||
+          point.y > height + 48;
+        if (off) {
+          el.style.visibility = "hidden";
+          el.style.pointerEvents = "none";
+          continue;
+        }
+        el.style.visibility = "visible";
+        el.style.pointerEvents = "auto";
+        el.style.transform = `translate(${Math.round(point.x)}px, ${Math.round(point.y)}px) translate(-50%, -100%)`;
+      }
+    };
+
+    const onMove = () => {
+      if (raf) return;
+      raf = window.requestAnimationFrame(() => {
+        raf = 0;
+        sync();
+      });
+    };
+
+    sync();
+    map.on("move", onMove);
+    map.on("resize", onMove);
+    return () => {
+      window.cancelAnimationFrame(raf);
+      map.off("move", onMove);
+      map.off("resize", onMove);
+    };
+  }, [filtered, mapVersion]);
 
   return (
     <div className="space-y-3 sm:space-y-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-        <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 text-sm [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          <button
-            type="button"
-            onClick={() => setFilter("all")}
-            className={`shrink-0 rounded-lg px-3 py-2.5 min-h-11 ${filter === "all" ? "bg-[var(--ink)] text-white" : "bg-[var(--surface-2)] text-[var(--muted)]"}`}
-          >
-            Todas ({stats.total})
-          </button>
-          <button
-            type="button"
-            onClick={() => setFilter("authorized")}
-            className={`shrink-0 rounded-lg px-3 py-2.5 min-h-11 ${filter === "authorized" ? "bg-blue-600 text-white" : "bg-blue-50 text-blue-800"}`}
-          >
-            Autorizadas ({stats.authorized})
-          </button>
-          <button
-            type="button"
-            onClick={() => setFilter("complete")}
-            className={`shrink-0 rounded-lg px-3 py-2.5 min-h-11 ${filter === "complete" ? "bg-[var(--wa-teal)] text-white" : "bg-[var(--wa-light)] text-[var(--wa-dark)]"}`}
-          >
-            Completas ({stats.complete})
-          </button>
-          <button
-            type="button"
-            onClick={() => setFilter("incomplete")}
-            className={`shrink-0 rounded-lg px-3 py-2.5 min-h-11 ${filter === "incomplete" ? "bg-orange-600 text-white" : "bg-orange-50 text-orange-800"}`}
-          >
-            Pendientes ({stats.incomplete})
-          </button>
-        </div>
-        <div className="flex flex-wrap gap-3 text-xs text-[var(--muted)] sm:gap-4">
-          <span className="inline-flex items-center gap-1.5">
-            <span className="h-2.5 w-2.5 rounded-full bg-blue-600" /> Autorizada
-          </span>
-          <span className="inline-flex items-center gap-1.5">
-            <span className="h-2.5 w-2.5 rounded-full bg-[var(--wa-green)]" /> Completo
-          </span>
-          <span className="inline-flex items-center gap-1.5">
-            <span className="h-2.5 w-2.5 rounded-full bg-orange-500" /> Pendiente
-          </span>
-          {provider && (
-            <span className="rounded-full bg-[var(--surface-2)] px-2 py-0.5">
-              {provider === "mapbox" ? "Mapbox" : "Mapa alterno"}
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+          <div className="-mx-1 flex flex-wrap items-center gap-2 px-1 pb-1 text-sm">
+            <button
+              type="button"
+              onClick={() => setFilter("all")}
+              className={`shrink-0 rounded-lg px-3 py-2.5 min-h-11 ${filter === "all" ? "bg-[var(--ink)] text-white" : "bg-[var(--surface-2)] text-[var(--muted)]"}`}
+            >
+              Todas ({stats.total})
+            </button>
+            <button
+              type="button"
+              onClick={() => setFilter("authorized")}
+              className={`shrink-0 rounded-lg px-3 py-2.5 min-h-11 ${filter === "authorized" ? "bg-blue-600 text-white" : "bg-blue-50 text-blue-800"}`}
+            >
+              Autorizadas ({stats.authorized})
+            </button>
+            <button
+              type="button"
+              onClick={() => setFilter("complete")}
+              className={`shrink-0 rounded-lg px-3 py-2.5 min-h-11 ${filter === "complete" ? "bg-[var(--wa-teal)] text-white" : "bg-[var(--wa-light)] text-[var(--wa-dark)]"}`}
+            >
+              Completas ({stats.complete})
+            </button>
+            <button
+              type="button"
+              onClick={() => setFilter("incomplete")}
+              className={`shrink-0 rounded-lg px-3 py-2.5 min-h-11 ${filter === "incomplete" ? "bg-orange-600 text-white" : "bg-orange-50 text-orange-800"}`}
+            >
+              Pendientes ({stats.incomplete})
+            </button>
+            <label className="flex min-w-[min(100%,18rem)] flex-1 items-center gap-2 sm:max-w-sm">
+              <span className="shrink-0 text-sm font-medium text-[var(--ink)]">Colonia</span>
+              <select
+                className="min-h-11 w-full rounded-lg border border-[var(--line)] bg-white px-3 text-sm text-[var(--ink)]"
+                value={coloniaKey ?? ""}
+                onChange={(event) => {
+                  const value = event.target.value;
+                  setColoniaKey(value || null);
+                }}
+              >
+                <option value="">Todas las colonias</option>
+                {coloniaOptions.map((colonia) => (
+                  <option key={colonia} value={normalizeColoniaKey(colonia)}>
+                    {colonia}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+          <div className="flex flex-wrap gap-3 text-xs text-[var(--muted)] sm:gap-4">
+            {activeColoniaLabel && (
+              <span className="text-sm text-[var(--ink)]">
+                N.º 1…{stats.total} de <span className="font-semibold">{activeColoniaLabel}</span>
+              </span>
+            )}
+            <span className="inline-flex items-center gap-1.5">
+              <span className="h-2.5 w-2.5 rounded-full bg-blue-600" /> Autorizada
             </span>
-          )}
+            <span className="inline-flex items-center gap-1.5">
+              <span className="h-2.5 w-2.5 rounded-full bg-[var(--wa-green)]" /> Completo
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <span className="h-2.5 w-2.5 rounded-full bg-orange-500" /> Pendiente
+            </span>
+            {provider && (
+              <span className="rounded-full bg-[var(--surface-2)] px-2 py-0.5">
+                {provider === "mapbox" ? "Mapbox" : "Mapa alterno"}
+              </span>
+            )}
+          </div>
         </div>
       </div>
 
@@ -412,6 +541,61 @@ export function CoyoacanMap({ houses }: Props) {
           ref={containerRef}
           className="h-[min(62dvh,640px)] w-full min-h-[300px] sm:h-[min(70vh,640px)] sm:min-h-[360px]"
         />
+
+        <div
+          ref={overlayRef}
+          className="pointer-events-none absolute inset-0 z-[5] overflow-hidden"
+        >
+          {mapVersion > 0 &&
+            filtered.features.map((feature) => {
+            const selected = feature.properties.id === selectedHouseId;
+            const consecutivo = houseConsecutivo(feature);
+            return (
+              <button
+                key={feature.properties.id}
+                ref={(node) => {
+                  if (node) balloonElsRef.current.set(feature.properties.id, node);
+                  else balloonElsRef.current.delete(feature.properties.id);
+                }}
+                type="button"
+                className="pointer-events-auto absolute left-0 top-0 flex flex-col items-center will-change-transform"
+                style={{ zIndex: selected ? 6 : 5 }}
+                title={
+                  showConsecutivoNumbers
+                    ? `N.º ${consecutivo} · ${feature.properties.colonia}`
+                    : feature.properties.colonia
+                }
+                onClick={() => {
+                  hideTooltip();
+                  setSelectedHouseId(feature.properties.id);
+                }}
+                aria-label={
+                  showConsecutivoNumbers
+                    ? `Consecutivo ${consecutivo} de ${feature.properties.colonia}`
+                    : `Casa en ${feature.properties.colonia}`
+                }
+              >
+                <span
+                  className={`inline-flex items-center justify-center rounded-full border-2 border-white font-extrabold leading-none text-white shadow-md ${
+                    showConsecutivoNumbers
+                      ? "min-h-7 min-w-7 px-1.5 text-[11px] sm:min-h-8 sm:min-w-8 sm:text-xs"
+                      : "h-3 w-3 sm:h-3.5 sm:w-3.5"
+                  } ${selected ? "ring-2 ring-[var(--ink)] ring-offset-1" : ""}`}
+                  style={{
+                    backgroundColor: feature.properties.color,
+                    zIndex: selected ? 6 : 5,
+                  }}
+                >
+                  {showConsecutivoNumbers ? consecutivo : null}
+                </span>
+                <span
+                  className="h-0 w-0 border-x-[6px] border-t-[8px] border-x-transparent"
+                  style={{ borderTopColor: feature.properties.color }}
+                />
+              </button>
+            );
+          })}
+        </div>
 
         {loading && (
           <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/80 text-sm text-[var(--muted)]">
@@ -425,29 +609,32 @@ export function CoyoacanMap({ houses }: Props) {
           </div>
         )}
 
-        {tooltip && (
-          <div
-            className="pointer-events-none absolute z-20 max-w-[calc(100%-1.5rem)] rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm shadow-md"
-            style={{
-              left: Math.min(tooltip.x + 12, (containerRef.current?.clientWidth ?? 320) - 120),
-              top: Math.max(8, tooltip.y - 40),
-            }}
-          >
-            <p className="font-semibold text-[var(--ink)]">{tooltip.colonia}</p>
-          </div>
-        )}
+        <div
+          ref={tooltipRef}
+          className="pointer-events-none absolute z-20 hidden max-w-[calc(100%-1.5rem)] rounded-md border border-[var(--line)] bg-white px-3 py-2 text-sm shadow-md"
+        >
+          <p ref={tooltipLabelRef} className="font-semibold text-[var(--ink)]" />
+        </div>
 
         {selectedHouse && (
           <div className="absolute bottom-3 left-3 right-3 z-20 max-h-[42%] max-w-sm overflow-y-auto overscroll-contain rounded-lg border border-[var(--line)] bg-white p-3 shadow-lg sm:bottom-4 sm:left-4 sm:right-auto sm:max-h-none">
-            <p className="text-xs font-semibold text-[var(--wa-teal)]">
-              {selectedHouse.properties.folio}
-            </p>
-            <p className="break-words font-semibold text-[var(--ink)]">
-              {selectedHouse.properties.address}
-            </p>
-            <p className="break-words text-xs text-[var(--muted)]">
-              {selectedHouse.properties.colonia}
-            </p>
+            <div className="flex items-start gap-3">
+              <span
+                className="inline-flex h-10 min-w-10 shrink-0 items-center justify-center rounded-full px-2 text-lg font-bold text-white"
+                style={{ backgroundColor: selectedHouse.properties.color }}
+              >
+                {houseConsecutivo(selectedHouse)}
+              </span>
+              <div className="min-w-0">
+                <p className="text-xs font-semibold text-[var(--wa-teal)]">
+                  N.º {houseConsecutivo(selectedHouse)} de {selectedHouse.properties.colonia}
+                </p>
+                <p className="text-xs text-[var(--muted)]">{selectedHouse.properties.folio}</p>
+                <p className="break-words font-semibold text-[var(--ink)]">
+                  {selectedHouse.properties.address}
+                </p>
+              </div>
+            </div>
             {selectedHouse.properties.autorizado && (
               <p className="mt-1 text-xs font-medium text-blue-700">Autorizada</p>
             )}

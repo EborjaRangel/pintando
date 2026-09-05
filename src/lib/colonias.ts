@@ -123,6 +123,22 @@ export const COLONIAS_COYOACAN = [
 
 export type ColoniaCoyoacan = (typeof COLONIAS_COYOACAN)[number];
 
+/** Compara nombres de colonia aunque el mapa y el catálogo no usen el mismo texto. */
+export function normalizeColoniaKey(name: string): string {
+  return name
+    .normalize("NFD")
+    .replace(/\p{M}/gu, "")
+    .toLowerCase()
+    .replace(/\b(de|del|la|el|los|las)\b/g, " ")
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+export function coloniasAreSame(a: string, b: string): boolean {
+  return normalizeColoniaKey(a) === normalizeColoniaKey(b);
+}
+
 /** Centro aproximado de Coyoacán, CDMX */
 export const COYOACAN_CENTER = {
   latitude: 19.3467,
