@@ -190,10 +190,15 @@ export async function buildHousesExcel(houses: HouseExportRow[]): Promise<Buffer
 
   const imageUrls = [
     ...new Set(
-      houses.flatMap((house) => [
-        ...house.photos.map((photo) => photo.url),
-        house.comprobanteUrl,
-      ]).filter((url): url is string => Boolean(url) && !/\.pdf(\?|$)/i.test(url))
+      houses
+        .flatMap((house) => [
+          ...house.photos.map((photo) => photo.url),
+          house.comprobanteUrl,
+        ])
+        .filter(
+          (url): url is string =>
+            typeof url === "string" && url.length > 0 && !/\.pdf(\?|$)/i.test(url)
+        )
     ),
   ];
   const imageCache = new Map(
