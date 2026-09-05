@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/api";
 import { buildHousesExcel } from "@/lib/export-houses-excel";
 import { buildHousesHtml } from "@/lib/export-houses-html";
+import { loadConsecutivosById } from "@/lib/consecutivo";
 import {
   canExportAllExcel,
   canExportAuthorizedExcel,
@@ -102,43 +103,60 @@ export async function GET(request: Request) {
     );
   }
 
+  const consecutivos = await loadConsecutivosById(prisma);
+  const rows = houses.map((house) => ({
+    ...house,
+    consecutivo: Number(consecutivos.get(house.id) ?? house.consecutivo) || 0,
+  }));
+
   const stamp = new Date().toISOString().slice(0, 10);
   const format = searchParams.get("format") === "html" ? "html" : "xlsx";
 
-  // HTML: fotos visibles en iPhone/Safari. Excel: útil en PC/tableta.
-  if (format === "html") {
-    const html = await buildHousesHtml(houses);
+  try {
+    // HTML: fotos visibles en iPhone/Safari. Excel: útil en PC/tableta.
+    if (format === "html") {
+      const html = await buildHousesHtml(rows);
+      const filename =
+        scope === "authorized"
+          ? `pintando-autorizados-${stamp}.html`
+          : scope === "all"
+            ? `pintando-casas-${stamp}.html`
+            : `pintando-seguimiento-${stamp}.html`;
+      return new NextResponse(html, {
+        status: 200,
+        headers: {
+          "Content-Type": "text/html; charset=utf-8",
+          "Content-Disposition": `inline; filename="${filename}"`,
+          "Cache-Control": "no-store",
+        },
+      });
+    }
+
+    const buffer = await buildHousesExcel(rows);
     const filename =
       scope === "authorized"
-        ? `pintando-autorizados-${stamp}.html`
+        ? `pintando-autorizados-${stamp}.xlsx`
         : scope === "all"
-          ? `pintando-casas-${stamp}.html`
-          : `pintando-seguimiento-${stamp}.html`;
-    return new NextResponse(html, {
+          ? `pintando-casas-${stamp}.xlsx`
+          : `pintando-seguimiento-${stamp}.xlsx`;
+
+    return new NextResponse(new Uint8Array(buffer), {
       status: 200,
       headers: {
-        "Content-Type": "text/html; charset=utf-8",
-        "Content-Disposition": `inline; filename="${filename}"`,
+        "Content-Type":
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "Content-Disposition": `attachment; filename="${filename}"`,
         "Cache-Control": "no-store",
       },
     });
+  } catch (err) {
+    console.error("[export casas]", err);
+    return NextResponse.json(
+      {
+        error:
+          "No se pudo generar el archivo. Intenta de nuevo o selecciona menos casas.",
+      },
+      { status: 500 }
+    );
   }
-
-  const buffer = await buildHousesExcel(houses);
-  const filename =
-    scope === "authorized"
-      ? `pintando-autorizados-${stamp}.xlsx`
-      : scope === "all"
-        ? `pintando-casas-${stamp}.xlsx`
-        : `pintando-seguimiento-${stamp}.xlsx`;
-
-  return new NextResponse(new Uint8Array(buffer), {
-    status: 200,
-    headers: {
-      "Content-Type":
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "Content-Disposition": `attachment; filename="${filename}"`,
-      "Cache-Control": "no-store",
-    },
-  });
 }

@@ -90,7 +90,11 @@ export function ExportExcelButton({
       if (ids?.length) params.set("ids", ids.join(","));
       params.set("format", format);
 
-      const res = await fetch(`/api/houses/export?${params.toString()}`);
+      const controller = new AbortController();
+      const timeout = window.setTimeout(() => controller.abort(), 90_000);
+      const res = await fetch(`/api/houses/export?${params.toString()}`, {
+        signal: controller.signal,
+      }).finally(() => window.clearTimeout(timeout));
       if (!res.ok) {
         const data = (await res.json().catch(() => null)) as { error?: string } | null;
         throw new Error(data?.error || "No se pudo generar el archivo");
@@ -105,7 +109,11 @@ export function ExportExcelButton({
 
       saveBlob(blob, filename, format === "html");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error al descargar");
+      if (err instanceof DOMException && err.name === "AbortError") {
+        setError("La generación tardó demasiado. Intenta de nuevo o selecciona menos casas.");
+      } else {
+        setError(err instanceof Error ? err.message : "Error al descargar");
+      }
     } finally {
       setLoading(null);
     }

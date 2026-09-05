@@ -65,12 +65,12 @@ function looksLikePdf(buffer: Buffer, contentType?: string | null, url?: string)
 }
 
 /**
- * Descarga (o lee) cualquier imagen y la convierte a PNG embebible en Excel.
- * PNG + ancla twoCell es más compatible con Excel/Files en iPhone.
+ * Miniatura JPEG para el Excel. PNG a 640px inflaba el archivo y Vercel/Railway
+ * no alcanzaban a devolverlo (unas cuantas casas ya superaban 6 MB).
  */
 async function tryReadImage(
   url: string | null | undefined
-): Promise<{ buffer: Buffer; extension: "png" } | null> {
+): Promise<{ buffer: Buffer; extension: "jpeg" } | null> {
   if (!url) return null;
 
   try {
@@ -78,7 +78,10 @@ async function tryReadImage(
     let contentType: string | null = null;
 
     if (url.startsWith("http://") || url.startsWith("https://")) {
-      const res = await fetch(url, { redirect: "follow" });
+      const res = await fetch(url, {
+        redirect: "follow",
+        signal: AbortSignal.timeout(8_000),
+      });
       if (!res.ok) return null;
       contentType = res.headers.get("content-type");
       raw = Buffer.from(await res.arrayBuffer());
@@ -91,21 +94,41 @@ async function tryReadImage(
     if (!raw.length) return null;
     if (looksLikePdf(raw, contentType, url)) return null;
 
-    const png = await sharp(raw)
+    const jpeg = await sharp(raw)
       .rotate()
       .resize({
-        width: 640,
-        height: 480,
+        width: IMAGE_WIDTH_PX * 2,
+        height: IMAGE_HEIGHT_PX * 2,
         fit: "inside",
         withoutEnlargement: true,
       })
-      .png({ compressionLevel: 8, adaptiveFiltering: true })
+      .jpeg({ quality: 52 })
       .toBuffer();
 
-    return { buffer: png, extension: "png" };
+    return { buffer: jpeg, extension: "jpeg" };
   } catch {
     return null;
   }
+}
+
+async function mapPool<T, R>(items: T[], limit: number, fn: (item: T) => Promise<R>): Promise<R[]> {
+  if (items.length === 0) return [];
+  const results = new Array<R>(items.length);
+  let next = 0;
+  async function worker() {
+    while (true) {
+      const index = next++;
+      if (index >= items.length) return;
+      results[index] = await fn(items[index]);
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, () => worker()));
+  return results;
+}
+
+function columnNumber(sheet: ExcelJS.Worksheet, key: string): number {
+  const index = (sheet.columns ?? []).findIndex((column) => column.key === key);
+  return index >= 0 ? index + 1 : 1;
 }
 
 export async function buildHousesExcel(houses: HouseExportRow[]): Promise<Buffer> {
@@ -160,6 +183,23 @@ export async function buildHousesExcel(houses: HouseExportRow[]): Promise<Buffer
   header.alignment = { vertical: "middle", horizontal: "center", wrapText: true };
   header.height = 22;
 
+  const foto1Col = columnNumber(sheet, "foto1");
+  const foto2Col = columnNumber(sheet, "foto2");
+  const foto3Col = columnNumber(sheet, "foto3");
+  const comprobanteImgCol = columnNumber(sheet, "comprobanteImg");
+
+  const imageUrls = [
+    ...new Set(
+      houses.flatMap((house) => [
+        ...house.photos.map((photo) => photo.url),
+        house.comprobanteUrl,
+      ]).filter((url): url is string => Boolean(url) && !/\.pdf(\?|$)/i.test(url))
+    ),
+  ];
+  const imageCache = new Map(
+    await mapPool(imageUrls, 8, async (url) => [url, await tryReadImage(url)] as const)
+  );
+
   for (let i = 0; i < houses.length; i++) {
     const house = houses[i];
     const status = getHouseStatus(house);
@@ -171,7 +211,7 @@ export async function buildHousesExcel(houses: HouseExportRow[]): Promise<Buffer
     const row = sheet.getRow(rowIndex);
     const mapLink = mapsUrl(house.latitude, house.longitude);
 
-    // Columnas de imagen: Foto1=27, Foto2=28, Foto3=29, Comprobante=30 (1-based)
+    // Columnas de imagen: se calculan por key para no desfasarlas al agregar columnas.
     const imageSlots: Array<{
       url: string | null;
       col: number;
@@ -179,12 +219,12 @@ export async function buildHousesExcel(houses: HouseExportRow[]): Promise<Buffer
       empty: string;
       pdfLabel: string;
     }> = [
-      { url: photosBySlot[0], col: 27, key: "foto1", empty: "Sin foto", pdfLabel: "PDF" },
-      { url: photosBySlot[1], col: 28, key: "foto2", empty: "Sin foto", pdfLabel: "PDF" },
-      { url: photosBySlot[2], col: 29, key: "foto3", empty: "Sin foto", pdfLabel: "PDF" },
+      { url: photosBySlot[0], col: foto1Col, key: "foto1", empty: "Sin foto", pdfLabel: "PDF" },
+      { url: photosBySlot[1], col: foto2Col, key: "foto2", empty: "Sin foto", pdfLabel: "PDF" },
+      { url: photosBySlot[2], col: foto3Col, key: "foto3", empty: "Sin foto", pdfLabel: "PDF" },
       {
         url: house.comprobanteUrl,
-        col: 30,
+        col: comprobanteImgCol,
         key: "comprobanteImg",
         empty: "Sin comprobante",
         pdfLabel: "Ver PDF (enlace en app)",
@@ -203,7 +243,7 @@ export async function buildHousesExcel(houses: HouseExportRow[]): Promise<Buffer
         continue;
       }
 
-      const image = await tryReadImage(slot.url);
+      const image = slot.url ? imageCache.get(slot.url) ?? null : null;
       if (!image) {
         imageLabels[slot.key] = "No se pudo cargar";
         continue;
@@ -225,7 +265,7 @@ export async function buildHousesExcel(houses: HouseExportRow[]): Promise<Buffer
 
     row.values = {
       folio: formatFolio(house.folio),
-      consecutivo: house.consecutivo,
+      consecutivo: Number(house.consecutivo) || 0,
       id: house.id,
       address: house.address,
       colonia: house.colonia,
