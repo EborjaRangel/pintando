@@ -6,6 +6,8 @@ import type { FeatureCollection } from "geojson";
 import { CENTRO_COYOACAN, MAPBOX_TOKEN, mapboxConfigError } from "@/lib/mapbox-config";
 import { initBasemap, type AnyMap } from "@/lib/init-map";
 import { normalizeColoniaKey } from "@/lib/colonias";
+import { coloniaSelectionFromName } from "@/lib/colonia-selection";
+import { useColoniaSelection } from "@/components/use-colonia-selection";
 
 type HouseFeature = {
   type: "Feature";
@@ -117,7 +119,10 @@ export function CoyoacanMap({ houses }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [provider, setProvider] = useState<"mapbox" | "maplibre" | null>(null);
   const [filter, setFilter] = useState<"all" | "authorized" | "complete" | "incomplete">("all");
-  const [coloniaKey, setColoniaKey] = useState<string | null>(null);
+  const { selection: coloniaSelection, setSelection: setColoniaSelection } = useColoniaSelection();
+  const coloniaKey = coloniaSelection?.key ?? null;
+  const setColoniaSelectionRef = useRef(setColoniaSelection);
+  setColoniaSelectionRef.current = setColoniaSelection;
   const [selectedHouseId, setSelectedHouseId] = useState<string | null>(null);
   const [mapVersion, setMapVersion] = useState(0);
   const overlayRef = useRef<HTMLDivElement>(null);
@@ -148,8 +153,9 @@ export function CoyoacanMap({ houses }: Props) {
   const coloniaOptions = useMemo(() => {
     const names = new Set<string>();
     for (const feature of houses.features) names.add(feature.properties.colonia);
+    if (coloniaSelection?.label) names.add(coloniaSelection.label);
     return [...names].sort((a, b) => a.localeCompare(b, "es"));
-  }, [houses]);
+  }, [houses, coloniaSelection?.label]);
 
   const scopedHouses = useMemo(() => {
     if (!activeColoniaKey) return houses.features;
@@ -347,7 +353,7 @@ export function CoyoacanMap({ houses }: Props) {
             }) => {
               const colonia = String(event.features?.[0]?.properties?.name ?? "");
               if (!colonia) return;
-              setColoniaKey(normalizeColoniaKey(colonia));
+              setColoniaSelectionRef.current(coloniaSelectionFromName(colonia));
               hideTooltip();
             });
 
@@ -500,7 +506,14 @@ export function CoyoacanMap({ houses }: Props) {
                 value={coloniaKey ?? ""}
                 onChange={(event) => {
                   const value = event.target.value;
-                  setColoniaKey(value || null);
+                  if (!value) {
+                    setColoniaSelection(null);
+                    return;
+                  }
+                  const label =
+                    coloniaOptions.find((colonia) => normalizeColoniaKey(colonia) === value) ??
+                    value;
+                  setColoniaSelection(coloniaSelectionFromName(label));
                 }}
               >
                 <option value="">Todas las colonias</option>

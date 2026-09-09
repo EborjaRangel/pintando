@@ -72,7 +72,9 @@ export default async function CasasPage() {
               ? `Todas las casas de todos los capturistas · rol ${roleLabel(role)}. Solo se autoriza con 3 fotos, comprobante y expediente completo.${
                   exportScope === "all"
                     ? " El Excel incluye todos los registros, sin importar el estatus."
-                    : ""
+                    : exportScope === "authorized"
+                      ? " El Excel solo se genera con una colonia elegida en Mapa (no Todas las colonias) y únicamente esas casas autorizadas."
+                      : ""
                 }`
               : "Solo ves las casas que tú levantaste. Tu Excel de seguimiento incluye esas mismas (aunque falten fotos o autorización)."}
           </p>

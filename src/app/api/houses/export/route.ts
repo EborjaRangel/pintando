@@ -11,6 +11,8 @@ import {
   canExportTrackingExcel,
   type ExcelExportScope,
 } from "@/lib/roles";
+import { coloniaFilenamePart, parseColoniaFilterParam } from "@/lib/colonia-selection";
+import { normalizeColoniaKey } from "@/lib/colonias";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -26,6 +28,11 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const scopeParam = searchParams.get("scope") as ExcelExportScope | null;
   const idsParam = searchParams.get("ids");
+  const coloniaFilterKey = parseColoniaFilterParam(
+    searchParams.get("colonia"),
+    searchParams.get("coloniaKey")
+  );
+  const coloniaLabel = searchParams.get("colonia")?.trim() || "";
   const ids = idsParam
     ? idsParam
         .split(",")
@@ -70,11 +77,44 @@ export async function GET(request: Request) {
     );
   }
 
-  // Admin: todas. Autorización: solo autorizadas. Usuario: las que él levantó.
-  const idFilter = ids?.length ? { id: { in: ids } } : {};
+  if (scope === "authorized" && !coloniaFilterKey) {
+    return NextResponse.json(
+      {
+        error:
+          "Selecciona una colonia en el mapa. No se puede generar el archivo con Todas las colonias.",
+      },
+      { status: 400 }
+    );
+  }
+
+  // Admin: todas. Autorización: solo autorizadas de la colonia del mapa. Usuario: las que él levantó.
+  const idFilter =
+    scope === "authorized" || !ids?.length ? {} : { id: { in: ids } };
+  let coloniaFilter: Prisma.HouseWhereInput = {};
+  if (scope === "authorized" && coloniaFilterKey) {
+    const coloniaNames = await prisma.house.findMany({
+      where: { autorizado: true },
+      select: { colonia: true },
+    });
+    const matchingNames = [
+      ...new Set(
+        coloniaNames
+          .map((row) => row.colonia)
+          .filter((name) => normalizeColoniaKey(name) === coloniaFilterKey)
+      ),
+    ];
+    if (matchingNames.length === 0) {
+      return NextResponse.json(
+        { error: "No hay casas autorizadas en la colonia seleccionada" },
+        { status: 404 }
+      );
+    }
+    coloniaFilter = { colonia: { in: matchingNames } };
+  }
+
   const where: Prisma.HouseWhereInput =
     scope === "authorized"
-      ? { autorizado: true, ...idFilter }
+      ? { autorizado: true, ...coloniaFilter, ...idFilter }
       : scope === "all"
         ? { ...idFilter }
         : { createdById: userId, ...idFilter };
@@ -94,7 +134,7 @@ export async function GET(request: Request) {
       {
         error:
           scope === "authorized"
-            ? "No hay casas autorizadas para exportar"
+            ? "No hay casas autorizadas en la colonia seleccionada"
             : scope === "all"
               ? "No hay casas para exportar"
               : "No tienes casas para exportar",
@@ -111,6 +151,8 @@ export async function GET(request: Request) {
 
   const stamp = new Date().toISOString().slice(0, 10);
   const format = searchParams.get("format") === "html" ? "html" : "xlsx";
+  const coloniaSlug =
+    scope === "authorized" ? `-${coloniaFilenamePart(coloniaLabel || coloniaFilterKey || "")}` : "";
 
   try {
     // HTML: fotos visibles en iPhone/Safari. Excel: útil en PC/tableta.
@@ -118,7 +160,7 @@ export async function GET(request: Request) {
       const html = await buildHousesHtml(rows);
       const filename =
         scope === "authorized"
-          ? `pintando-autorizados-${stamp}.html`
+          ? `pintando-autorizados${coloniaSlug}-${stamp}.html`
           : scope === "all"
             ? `pintando-casas-${stamp}.html`
             : `pintando-seguimiento-${stamp}.html`;
@@ -135,7 +177,7 @@ export async function GET(request: Request) {
     const buffer = await buildHousesExcel(rows);
     const filename =
       scope === "authorized"
-        ? `pintando-autorizados-${stamp}.xlsx`
+        ? `pintando-autorizados${coloniaSlug}-${stamp}.xlsx`
         : scope === "all"
           ? `pintando-casas-${stamp}.xlsx`
           : `pintando-seguimiento-${stamp}.xlsx`;

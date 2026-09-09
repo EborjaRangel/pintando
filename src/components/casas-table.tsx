@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import { StatusBadge } from "@/components/status-badge";
 import { ExportExcelButton } from "@/components/export-excel-button";
 import { AuthorizeHouseButton } from "@/components/authorize-house-button";
+import { useColoniaSelection } from "@/components/use-colonia-selection";
 import {
   getAuthorizationBlockers,
   type CompletenessStatus,
@@ -89,7 +90,9 @@ export function CasasTable({
     if (canRevoke && house.autorizado) return true;
     return false;
   }
+  const showRowSelect = canExport && exportScope !== "authorized";
   const [selected, setSelected] = useState<string[]>([]);
+  const { selection: coloniaSelection } = useColoniaSelection();
 
   const allSelected = houses.length > 0 && selected.length === houses.length;
   const selectedIds = useMemo(() => selected, [selected]);
@@ -109,19 +112,31 @@ export function CasasTable({
       {canExport && (
         <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
           <p className="text-sm text-[var(--muted)]">
-            {selected.length > 0
-              ? `${selected.length} casa(s) seleccionada(s)`
-              : exportScope === "tracking"
-                ? "Excel de seguimiento: solo las casas que tú levantaste (completas o no)."
-                : exportScope === "all"
-                  ? "Excel de todas las casas, sin importar el estatus. Incluye capturista, fecha/hora, georreferencia y fotos."
-                  : "Excel de autorizadas (todas las de todos los capturistas). Selecciona o baja el listado."}
+            {exportScope === "authorized"
+              ? coloniaSelection
+                ? `Excel de autorizadas de ${coloniaSelection.label}. Elige la colonia en Mapa; no se genera con Todas las colonias.`
+                : "Para generar el Excel elige una colonia en Mapa. No se puede con Todas las colonias."
+              : selected.length > 0
+                ? `${selected.length} casa(s) seleccionada(s)`
+                : exportScope === "tracking"
+                  ? "Excel de seguimiento: solo las casas que tú levantaste (completas o no)."
+                  : exportScope === "all"
+                    ? "Excel de todas las casas, sin importar el estatus. Incluye capturista, fecha/hora, georreferencia y fotos."
+                    : "Excel de autorizadas (todas las de todos los capturistas). Selecciona o baja el listado."}
           </p>
           <ExportExcelButton
             scope={exportScope}
-            ids={selectedIds.length > 0 ? selectedIds : undefined}
+            ids={
+              exportScope === "authorized" || selectedIds.length === 0
+                ? undefined
+                : selectedIds
+            }
             label={
-              selectedIds.length > 0 ? `Excel (${selectedIds.length})` : exportLabel
+              exportScope === "authorized"
+                ? exportLabel
+                : selectedIds.length > 0
+                  ? `Excel (${selectedIds.length})`
+                  : exportLabel
             }
             className="inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-[var(--wa-green)] px-4 py-2.5 text-sm font-semibold text-[var(--wa-darker)] transition hover:brightness-105 disabled:opacity-60 sm:w-auto"
           />
@@ -130,7 +145,7 @@ export function CasasTable({
 
       {/* Mobile cards */}
       <div className="space-y-3 md:hidden">
-        {canExport && (
+        {showRowSelect && (
           <label className="flex min-h-11 items-center gap-3 rounded-xl border border-[var(--line)] bg-white px-4 py-2">
             <input
               type="checkbox"
@@ -149,7 +164,7 @@ export function CasasTable({
             className="rounded-xl border border-[var(--line)] bg-white p-4 shadow-sm"
           >
             <div className="flex items-start gap-3">
-              {canExport && (
+              {showRowSelect && (
                 <label className="flex min-h-11 min-w-11 items-center justify-center">
                   <input
                     type="checkbox"
@@ -219,7 +234,7 @@ export function CasasTable({
         <table className="min-w-full text-left text-sm">
           <thead className="bg-[var(--surface-2)] text-[var(--muted)]">
             <tr>
-              {canExport && (
+              {showRowSelect && (
                 <th className="px-4 py-3 font-medium">
                   <label className="inline-flex min-h-11 min-w-11 cursor-pointer items-center justify-center">
                     <input
@@ -248,7 +263,7 @@ export function CasasTable({
           <tbody>
             {houses.map((house) => (
               <tr key={house.id} className="border-t border-[var(--line)]">
-                {canExport && (
+                {showRowSelect && (
                   <td className="px-4 py-3">
                     <label className="inline-flex min-h-11 min-w-11 cursor-pointer items-center justify-center">
                       <input

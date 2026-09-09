@@ -58,6 +58,7 @@ export default async function MapaPage() {
         <p className="mt-1 max-w-2xl text-sm text-[var(--muted)]">
         Azul: autorizada. Verde: expediente completo. Naranja: pendiente. Elige una colonia
         en el selector (después de Pendientes) para ver solo esa y su consecutivo 1, 2, 3….
+        El rol Autorización necesita esa colonia para generar el Excel; con Todas las colonias no se descarga.
         </p>
       </div>
       {/* En móvil el mapa ocupa todo el ancho (sin márgenes laterales) */}

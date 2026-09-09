@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { ExcelExportScope } from "@/lib/roles";
+import { useColoniaSelection } from "@/components/use-colonia-selection";
 
 type Props = {
   ids?: string[];
@@ -57,10 +58,11 @@ const defaultExcelClass =
 const defaultHtmlClass =
   "inline-flex min-h-11 w-full items-center justify-center whitespace-nowrap rounded-lg border border-[var(--line)] bg-white px-3 py-2.5 text-sm font-semibold text-[var(--ink)] transition hover:bg-[var(--surface-2)] disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto";
 
-function excelTitle(scope?: ExcelExportScope) {
+function excelTitle(scope?: ExcelExportScope, coloniaLabel?: string | null) {
   if (scope === "tracking") return "Descarga tu listado de seguimiento en Excel";
   if (scope === "all") return "Descarga todas las casas en Excel (cualquier estatus)";
-  return "Descarga casas autorizadas en Excel";
+  if (coloniaLabel) return `Descarga casas autorizadas de ${coloniaLabel}`;
+  return "Selecciona una colonia en Mapa. No se puede generar con Todas las colonias.";
 }
 
 export function ExportExcelButton({
@@ -73,21 +75,37 @@ export function ExportExcelButton({
   const [loading, setLoading] = useState<ExportFormat | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showBoth, setShowBoth] = useState(false);
+  const { selection: coloniaSelection } = useColoniaSelection();
+  const requireColonia = scope === "authorized";
+  const coloniaReady = !requireColonia || Boolean(coloniaSelection);
 
   useEffect(() => {
     setShowBoth(isPhoneOrTablet());
   }, []);
 
-  const excelLabel = label || "Excel";
   const excelClass = className || defaultExcelClass;
+  const missingColoniaMessage =
+    "Selecciona una colonia en Mapa. No se puede generar el archivo con Todas las colonias.";
+  const excelLabel =
+    requireColonia && coloniaSelection
+      ? `${label || "Excel"} · ${coloniaSelection.label}`
+      : label || "Excel";
 
   async function download(format: ExportFormat) {
+    if (requireColonia && !coloniaSelection) {
+      setError(missingColoniaMessage);
+      return;
+    }
     setLoading(format);
     setError(null);
     try {
       const params = new URLSearchParams();
       if (scope) params.set("scope", scope);
-      if (ids?.length) params.set("ids", ids.join(","));
+      if (ids?.length && scope !== "authorized") params.set("ids", ids.join(","));
+      if (coloniaSelection) {
+        params.set("colonia", coloniaSelection.label);
+        params.set("coloniaKey", coloniaSelection.key);
+      }
       params.set("format", format);
 
       const controller = new AbortController();
@@ -126,9 +144,13 @@ export function ExportExcelButton({
           <button
             type="button"
             onClick={() => void download("html")}
-            disabled={loading !== null}
+            disabled={loading !== null || !coloniaReady}
             className={defaultHtmlClass}
-            title="Abre un listado con las fotos visibles en el celular"
+            title={
+              coloniaReady
+                ? "Abre un listado con las fotos visibles en el celular"
+                : missingColoniaMessage
+            }
           >
             {loading === "html" ? "Generando…" : "Ver listado con fotos"}
           </button>
@@ -136,9 +158,9 @@ export function ExportExcelButton({
         <button
           type="button"
           onClick={() => void download("xlsx")}
-          disabled={loading !== null}
+          disabled={loading !== null || !coloniaReady}
           className={excelClass}
-          title={excelTitle(scope)}
+          title={excelTitle(scope, coloniaSelection?.label)}
         >
           {loading === "xlsx" ? "Generando…" : excelLabel}
         </button>
