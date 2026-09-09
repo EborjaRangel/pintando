@@ -3,7 +3,7 @@ import { readFile } from "fs/promises";
 import path from "path";
 import sharp from "sharp";
 import { fixExcelDrawingExtents } from "@/lib/fix-excel-drawings";
-import { getHouseStatus, getStatusLabel } from "@/lib/house-status";
+import { getExportStatusLabel, getHouseStatus } from "@/lib/house-status";
 import { formatFolio } from "@/lib/folio";
 
 const IMAGE_WIDTH_PX = 120;
@@ -149,7 +149,7 @@ export async function buildHousesExcel(houses: HouseExportRow[]): Promise<Buffer
     { header: "Latitud", key: "latitude", width: 14 },
     { header: "Longitud", key: "longitude", width: 14 },
     { header: "Mapa (georreferencia)", key: "mapa", width: 28 },
-    { header: "Estado expediente", key: "status", width: 20 },
+    { header: "Estatus", key: "status", width: 22 },
     { header: "Autorizada", key: "autorizada", width: 12 },
     { header: "Fecha autorización", key: "fechaAutorizacion", width: 20 },
     { header: "Autorizó", key: "autorizo", width: 22 },
@@ -207,7 +207,6 @@ export async function buildHousesExcel(houses: HouseExportRow[]): Promise<Buffer
 
   for (let i = 0; i < houses.length; i++) {
     const house = houses[i];
-    const status = getHouseStatus(house);
     const photosBySlot = [1, 2, 3].map(
       (slot) => house.photos.find((p) => p.slot === slot)?.url ?? null
     );
@@ -277,7 +276,7 @@ export async function buildHousesExcel(houses: HouseExportRow[]): Promise<Buffer
       latitude: house.latitude,
       longitude: house.longitude,
       mapa: mapLink,
-      status: getStatusLabel(status),
+      status: getExportStatusLabel(house),
       autorizada: house.autorizado ? "Sí" : "No",
       fechaAutorizacion: house.autorizadoAt
         ? formatMexicoDateTime(house.autorizadoAt)

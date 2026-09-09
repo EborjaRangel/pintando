@@ -73,7 +73,7 @@ export default async function CasasPage() {
                   exportScope === "all"
                     ? " El Excel incluye todos los registros, sin importar el estatus."
                     : exportScope === "authorized"
-                      ? " El Excel solo se genera con una colonia elegida en Mapa (no Todas las colonias) y únicamente esas casas autorizadas."
+                      ? " El Excel solo se genera con una colonia elegida en Mapa (no Todas las colonias) e incluye todas las casas de esa colonia, con su estatus."
                       : ""
                 }`
               : "Solo ves las casas que tú levantaste. Tu Excel de seguimiento incluye esas mismas (aunque falten fotos o autorización)."}

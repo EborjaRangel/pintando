@@ -58,7 +58,7 @@ export async function GET(request: Request) {
 
   if (scope === "authorized" && !canExportAuthorizedExcel(role)) {
     return NextResponse.json(
-      { error: "Solo el rol Autorización puede exportar casas autorizadas" },
+      { error: "Solo el rol Autorización puede exportar Excel por colonia" },
       { status: 403 }
     );
   }
@@ -87,13 +87,12 @@ export async function GET(request: Request) {
     );
   }
 
-  // Admin: todas. Autorización: solo autorizadas de la colonia del mapa. Usuario: las que él levantó.
+  // Admin: todas. Autorización: todas las de la colonia del mapa (cualquier estatus). Usuario: las que él levantó.
   const idFilter =
     scope === "authorized" || !ids?.length ? {} : { id: { in: ids } };
   let coloniaFilter: Prisma.HouseWhereInput = {};
   if (scope === "authorized" && coloniaFilterKey) {
     const coloniaNames = await prisma.house.findMany({
-      where: { autorizado: true },
       select: { colonia: true },
     });
     const matchingNames = [
@@ -105,7 +104,7 @@ export async function GET(request: Request) {
     ];
     if (matchingNames.length === 0) {
       return NextResponse.json(
-        { error: "No hay casas autorizadas en la colonia seleccionada" },
+        { error: "No hay casas en la colonia seleccionada" },
         { status: 404 }
       );
     }
@@ -114,7 +113,7 @@ export async function GET(request: Request) {
 
   const where: Prisma.HouseWhereInput =
     scope === "authorized"
-      ? { autorizado: true, ...coloniaFilter, ...idFilter }
+      ? { ...coloniaFilter, ...idFilter }
       : scope === "all"
         ? { ...idFilter }
         : { createdById: userId, ...idFilter };
@@ -134,7 +133,7 @@ export async function GET(request: Request) {
       {
         error:
           scope === "authorized"
-            ? "No hay casas autorizadas en la colonia seleccionada"
+            ? "No hay casas en la colonia seleccionada"
             : scope === "all"
               ? "No hay casas para exportar"
               : "No tienes casas para exportar",
@@ -160,7 +159,7 @@ export async function GET(request: Request) {
       const html = await buildHousesHtml(rows);
       const filename =
         scope === "authorized"
-          ? `pintando-autorizados${coloniaSlug}-${stamp}.html`
+          ? `pintando-colonia${coloniaSlug}-${stamp}.html`
           : scope === "all"
             ? `pintando-casas-${stamp}.html`
             : `pintando-seguimiento-${stamp}.html`;
@@ -177,7 +176,7 @@ export async function GET(request: Request) {
     const buffer = await buildHousesExcel(rows);
     const filename =
       scope === "authorized"
-        ? `pintando-autorizados${coloniaSlug}-${stamp}.xlsx`
+        ? `pintando-colonia${coloniaSlug}-${stamp}.xlsx`
         : scope === "all"
           ? `pintando-casas-${stamp}.xlsx`
           : `pintando-seguimiento-${stamp}.xlsx`;

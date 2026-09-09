@@ -114,7 +114,7 @@ export function CasasTable({
           <p className="text-sm text-[var(--muted)]">
             {exportScope === "authorized"
               ? coloniaSelection
-                ? `Excel de autorizadas de ${coloniaSelection.label}. Elige la colonia en Mapa; no se genera con Todas las colonias.`
+                ? `Excel de ${coloniaSelection.label}: todas las casas de esa colonia, con estatus. Elige la colonia en Mapa; no se genera con Todas las colonias.`
                 : "Para generar el Excel elige una colonia en Mapa. No se puede con Todas las colonias."
               : selected.length > 0
                 ? `${selected.length} casa(s) seleccionada(s)`

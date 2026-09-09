@@ -8,7 +8,7 @@ type Props = {
   ids?: string[];
   label?: string;
   className?: string;
-  /** authorized = solo autorizadas; tracking = las del capturista; all = todas (admin) */
+  /** authorized = colonia del mapa (cualquier estatus); tracking = las del capturista; all = todas (admin) */
   scope?: ExcelExportScope;
   /** Solo el botón Excel (sin “Ver listado con fotos”). */
   excelOnly?: boolean;
@@ -61,7 +61,7 @@ const defaultHtmlClass =
 function excelTitle(scope?: ExcelExportScope, coloniaLabel?: string | null) {
   if (scope === "tracking") return "Descarga tu listado de seguimiento en Excel";
   if (scope === "all") return "Descarga todas las casas en Excel (cualquier estatus)";
-  if (coloniaLabel) return `Descarga casas autorizadas de ${coloniaLabel}`;
+  if (coloniaLabel) return `Descarga todas las casas de ${coloniaLabel} (cualquier estatus)`;
   return "Selecciona una colonia en Mapa. No se puede generar con Todas las colonias.";
 }
 

@@ -2,7 +2,7 @@ import { readFile } from "fs/promises";
 import path from "path";
 import sharp from "sharp";
 import { formatFolio } from "@/lib/folio";
-import { getHouseStatus, getStatusLabel } from "@/lib/house-status";
+import { getExportStatusLabel } from "@/lib/house-status";
 import type { HouseExportRow } from "@/lib/export-houses-excel";
 
 function escapeHtml(value: string) {
@@ -54,7 +54,7 @@ export async function buildHousesHtml(houses: HouseExportRow[]): Promise<string>
     );
     const photoUris = await Promise.all(photos.map((u) => imageToDataUri(u)));
     const compUri = await imageToDataUri(house.comprobanteUrl);
-    const status = getStatusLabel(getHouseStatus(house));
+    const status = getExportStatusLabel(house);
 
     const photoHtml = photoUris
       .map((uri, idx) =>
@@ -74,7 +74,7 @@ export async function buildHousesHtml(houses: HouseExportRow[]): Promise<string>
       <article class="card">
         <header>
           <h2>${escapeHtml(formatFolio(house.folio))} · N.º ${house.consecutivo}</h2>
-          <p class="status">${escapeHtml(status)}${house.autorizado ? " · Autorizada" : ""}</p>
+          <p class="status">${escapeHtml(status)}</p>
         </header>
         <p class="addr">${escapeHtml(house.address)}</p>
         <p class="meta">${escapeHtml(house.colonia)} · Consecutivo ${house.consecutivo} · Capturista: ${escapeHtml(house.createdBy.name)}</p>

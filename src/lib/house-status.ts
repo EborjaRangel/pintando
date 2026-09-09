@@ -45,3 +45,11 @@ export function getMapMarkerColor(house: HouseStatusInput & { autorizado?: boole
 export function getStatusLabel(status: CompletenessStatus): string {
   return status === "complete" ? "Expediente completo" : "Pendiente";
 }
+
+/** Estatus para reportes: autorización primero, luego expediente. */
+export function getExportStatusLabel(
+  house: HouseStatusInput & { autorizado?: boolean }
+): string {
+  if (house.autorizado) return "Autorizada";
+  return getStatusLabel(getHouseStatus(house));
+}

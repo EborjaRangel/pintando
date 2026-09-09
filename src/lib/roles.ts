@@ -30,7 +30,7 @@ export function canRevokeAuthorization(role: AppRole | string): boolean {
   return role === "ADMIN";
 }
 
-/** Autorización: Excel solo de casas autorizadas. */
+/** Autorización: Excel de la colonia del mapa (cualquier estatus). */
 export function canExportAuthorizedExcel(role: AppRole | string): boolean {
   return role === "AUTORIZACION";
 }
