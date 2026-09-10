@@ -113,46 +113,66 @@ function unionBounds(
   ];
 }
 
-/** Separa pines que caen en el mismo punto para que no se tapen. */
-function spreadOverlappingHouses(features: HouseFeature[]): HouseFeature[] {
-  const groups = new Map<string, HouseFeature[]>();
-  for (const feature of features) {
-    const [lng, lat] = feature.geometry.coordinates;
-    const key = `${lng.toFixed(5)},${lat.toFixed(5)}`;
-    const list = groups.get(key) ?? [];
-    list.push(feature);
-    groups.set(key, list);
-  }
-
-  const result: HouseFeature[] = [];
-  for (const group of groups.values()) {
-    if (group.length === 1) {
-      result.push(group[0]);
-      continue;
-    }
-    const [baseLng, baseLat] = group[0].geometry.coordinates;
-    const radius = 0.00009;
-    group.forEach((feature, index) => {
-      const angle = (2 * Math.PI * index) / group.length - Math.PI / 2;
-      result.push({
-        ...feature,
-        geometry: {
-          type: "Point",
-          coordinates: [
-            baseLng + Math.cos(angle) * radius,
-            baseLat + Math.sin(angle) * radius * 0.82,
-          ],
-        },
-      });
-    });
-  }
-  return result;
-}
-
 function houseConsecutivo(feature: HouseFeature): number {
   const raw = feature.properties.consecutivo ?? feature.properties.consecutivoLabel;
   const n = Number(raw);
   return Number.isFinite(n) ? n : 0;
+}
+
+function distanceDeg(a: HouseFeature, b: HouseFeature): number {
+  const [lngA, latA] = a.geometry.coordinates;
+  const [lngB, latB] = b.geometry.coordinates;
+  return Math.hypot(lngA - lngB, latA - latB);
+}
+
+/**
+ * Agrupa globos a menos de ~12 m. Si no, el 4 de Hidalgo 65 queda bajo el 21.
+ */
+function clusterNearbyHouses(features: HouseFeature[], threshold = 0.00012): HouseFeature[][] {
+  const clusters: HouseFeature[][] = [];
+  const assigned = new Set<string>();
+
+  for (const feature of features) {
+    if (assigned.has(feature.properties.id)) continue;
+    const cluster = [feature];
+    assigned.add(feature.properties.id);
+    let grew = true;
+    while (grew) {
+      grew = false;
+      for (const other of features) {
+        if (assigned.has(other.properties.id)) continue;
+        if (cluster.some((item) => distanceDeg(item, other) < threshold)) {
+          cluster.push(other);
+          assigned.add(other.properties.id);
+          grew = true;
+        }
+      }
+    }
+    clusters.push(cluster);
+  }
+  return clusters;
+}
+
+type ClusterSlot = { index: number; size: number };
+
+/** Misma manzana (~12 m): el 4 de Hidalgo 65 no debe quedar bajo el 21. */
+function clusterSlotsById(features: HouseFeature[]): Map<string, ClusterSlot> {
+  const slots = new Map<string, ClusterSlot>();
+  for (const group of clusterNearbyHouses(features)) {
+    group.sort((a, b) => houseConsecutivo(a) - houseConsecutivo(b));
+    group.forEach((feature, index) => {
+      slots.set(feature.properties.id, { index, size: group.length });
+    });
+  }
+  return slots;
+}
+
+function screenOffsetForCluster(slot: ClusterSlot | undefined): { x: number; y: number } {
+  if (!slot || slot.size < 2) return { x: 0, y: 0 };
+  const minChord = 42;
+  const radius = minChord / (2 * Math.sin(Math.PI / slot.size));
+  const angle = (2 * Math.PI * slot.index) / slot.size - Math.PI / 2;
+  return { x: Math.cos(angle) * radius, y: Math.sin(angle) * radius };
 }
 
 function featureName(feature: GeoJSON.Feature | undefined): string {
@@ -222,11 +242,13 @@ export function CoyoacanMap({ houses }: Props) {
               (feature) =>
                 !feature.properties.autorizado && feature.properties.status === filter
             );
-    return {
-      type: "FeatureCollection" as const,
-      features: spreadOverlappingHouses(features),
-    };
+    return { type: "FeatureCollection" as const, features };
   }, [filter, scopedHouses]);
+
+  const clusterSlots = useMemo(
+    () => clusterSlotsById(filtered.features),
+    [filtered]
+  );
 
   const stats = useMemo(() => {
     const authorized = scopedHouses.filter((feature) => feature.properties.autorizado).length;
@@ -488,11 +510,14 @@ export function CoyoacanMap({ houses }: Props) {
         const el = balloonElsRef.current.get(feature.properties.id);
         if (!el) continue;
         const point = map.project(feature.geometry.coordinates);
+        const offset = screenOffsetForCluster(clusterSlots.get(feature.properties.id));
+        const x = point.x + offset.x;
+        const y = point.y + offset.y;
         const off =
-          point.x < -48 ||
-          point.y < -48 ||
-          point.x > width + 48 ||
-          point.y > height + 48;
+          x < -48 ||
+          y < -48 ||
+          x > width + 48 ||
+          y > height + 48;
         if (off) {
           el.style.visibility = "hidden";
           el.style.pointerEvents = "none";
@@ -500,7 +525,7 @@ export function CoyoacanMap({ houses }: Props) {
         }
         el.style.visibility = "visible";
         el.style.pointerEvents = "auto";
-        el.style.transform = `translate(${Math.round(point.x)}px, ${Math.round(point.y)}px) translate(-50%, -100%)`;
+        el.style.transform = `translate(${Math.round(x)}px, ${Math.round(y)}px) translate(-50%, -100%)`;
       }
     };
 
@@ -520,7 +545,7 @@ export function CoyoacanMap({ houses }: Props) {
       map.off("move", onMove);
       map.off("resize", onMove);
     };
-  }, [filtered, mapVersion]);
+  }, [filtered, mapVersion, clusterSlots]);
 
   return (
     <div className="space-y-3 sm:space-y-4">
@@ -628,7 +653,7 @@ export function CoyoacanMap({ houses }: Props) {
                 }}
                 type="button"
                 className="pointer-events-auto absolute left-0 top-0 flex flex-col items-center will-change-transform"
-                style={{ zIndex: selected ? 6 : 5 }}
+                style={{ zIndex: selected ? 40 : Math.max(6, 36 - consecutivo) }}
                 title={
                   showConsecutivoNumbers
                     ? `N.º ${consecutivo} · ${feature.properties.colonia}`
@@ -652,7 +677,6 @@ export function CoyoacanMap({ houses }: Props) {
                   } ${selected ? "ring-2 ring-[var(--ink)] ring-offset-1" : ""}`}
                   style={{
                     backgroundColor: feature.properties.color,
-                    zIndex: selected ? 6 : 5,
                   }}
                 >
                   {showConsecutivoNumbers ? consecutivo : null}

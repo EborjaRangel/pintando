@@ -7,6 +7,9 @@ import { CoyoacanMapLoader } from "@/components/coyoacan-map-loader";
 import { housesWhereForRole } from "@/lib/house-access";
 import { loadConsecutivosById } from "@/lib/consecutivo";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export default async function MapaPage() {
   const session = await getServerSession(authOptions);
   const where = housesWhereForRole(session!.user.role, session!.user.id);
