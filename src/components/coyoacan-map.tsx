@@ -101,6 +101,54 @@ function boundsFromCollection(collection: FeatureCollection): LngLatBoundsLike |
   ];
 }
 
+function unionBounds(
+  a: LngLatBoundsLike | null,
+  b: LngLatBoundsLike | null
+): LngLatBoundsLike | null {
+  if (!a) return b;
+  if (!b) return a;
+  return [
+    [Math.min(a[0][0], b[0][0]), Math.min(a[0][1], b[0][1])],
+    [Math.max(a[1][0], b[1][0]), Math.max(a[1][1], b[1][1])],
+  ];
+}
+
+/** Separa pines que caen en el mismo punto para que no se tapen. */
+function spreadOverlappingHouses(features: HouseFeature[]): HouseFeature[] {
+  const groups = new Map<string, HouseFeature[]>();
+  for (const feature of features) {
+    const [lng, lat] = feature.geometry.coordinates;
+    const key = `${lng.toFixed(5)},${lat.toFixed(5)}`;
+    const list = groups.get(key) ?? [];
+    list.push(feature);
+    groups.set(key, list);
+  }
+
+  const result: HouseFeature[] = [];
+  for (const group of groups.values()) {
+    if (group.length === 1) {
+      result.push(group[0]);
+      continue;
+    }
+    const [baseLng, baseLat] = group[0].geometry.coordinates;
+    const radius = 0.00009;
+    group.forEach((feature, index) => {
+      const angle = (2 * Math.PI * index) / group.length - Math.PI / 2;
+      result.push({
+        ...feature,
+        geometry: {
+          type: "Point",
+          coordinates: [
+            baseLng + Math.cos(angle) * radius,
+            baseLat + Math.sin(angle) * radius * 0.82,
+          ],
+        },
+      });
+    });
+  }
+  return result;
+}
+
 function houseConsecutivo(feature: HouseFeature): number {
   const raw = feature.properties.consecutivo ?? feature.properties.consecutivoLabel;
   const n = Number(raw);
@@ -174,7 +222,10 @@ export function CoyoacanMap({ houses }: Props) {
               (feature) =>
                 !feature.properties.autorizado && feature.properties.status === filter
             );
-    return { type: "FeatureCollection" as const, features };
+    return {
+      type: "FeatureCollection" as const,
+      features: spreadOverlappingHouses(features),
+    };
   }, [filter, scopedHouses]);
 
   const stats = useMemo(() => {
@@ -415,10 +466,15 @@ export function CoyoacanMap({ houses }: Props) {
     const feature = geo.features.find(
       (item) => normalizeColoniaKey(featureName(item)) === coloniaKey
     );
-    const bounds = boundsFromGeometry(feature?.geometry);
+    const polygonBounds = boundsFromGeometry(feature?.geometry);
+    const houseBounds = boundsFromCollection({
+      type: "FeatureCollection",
+      features: scopedHouses,
+    });
+    const bounds = unionBounds(polygonBounds, houseBounds);
     if (!bounds) return;
-    map.fitBounds(bounds, { padding: 48, maxZoom: 15.5, duration: 450 });
-  }, [coloniaKey, mapVersion]);
+    map.fitBounds(bounds, { padding: 48, maxZoom: 16, duration: 450 });
+  }, [coloniaKey, mapVersion, scopedHouses]);
 
   useLayoutEffect(() => {
     const map = mapRef.current;

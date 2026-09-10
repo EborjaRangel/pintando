@@ -131,6 +131,7 @@ export function normalizeColoniaKey(name: string): string {
     .toLowerCase()
     .replace(/\b(de|del|la|el|los|las)\b/g, " ")
     .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\bcortinez\b/g, "cortines")
     .replace(/\s+/g, " ")
     .trim();
 }
@@ -145,3 +146,14 @@ export const COYOACAN_CENTER = {
   longitude: -99.1617,
   zoom: 12.2,
 } as const;
+
+/** Pin inicial del formulario: no es una casa real. */
+export function isPlaceholderCoyoacanPin(
+  latitude: number | null | undefined,
+  longitude: number | null | undefined
+): boolean {
+  return (
+    Math.abs(Number(latitude) - COYOACAN_CENTER.latitude) < 0.00005 &&
+    Math.abs(Number(longitude) - COYOACAN_CENTER.longitude) < 0.00005
+  );
+}

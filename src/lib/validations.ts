@@ -1,5 +1,5 @@
 import * as Yup from "yup";
-import { COLONIAS_COYOACAN } from "@/lib/colonias";
+import { COLONIAS_COYOACAN, isPlaceholderCoyoacanPin } from "@/lib/colonias";
 import { parseColors } from "@/lib/paleta-colores";
 
 export const loginSchema = Yup.object({
@@ -24,7 +24,14 @@ export const houseSchema = Yup.object({
   latitude: Yup.number()
     .min(19.25, "Latitud fuera de Coyoacán")
     .max(19.4, "Latitud fuera de Coyoacán")
-    .required("La latitud es obligatoria"),
+    .required("La latitud es obligatoria")
+    .test(
+      "pin-en-casa",
+      "Coloca el pin sobre la casa. Ahora está en el centro de Coyoacán, no en la colonia.",
+      function (value) {
+        return !isPlaceholderCoyoacanPin(value, this.parent.longitude);
+      }
+    ),
   longitude: Yup.number()
     .min(-99.25, "Longitud fuera de Coyoacán")
     .max(-99.05, "Longitud fuera de Coyoacán")

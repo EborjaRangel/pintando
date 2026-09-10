@@ -3,7 +3,7 @@
 import { Formik, Form, Field, ErrorMessage } from "formik";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { COLONIAS_COYOACAN, COYOACAN_CENTER } from "@/lib/colonias";
+import { COLONIAS_COYOACAN, COYOACAN_CENTER, isPlaceholderCoyoacanPin } from "@/lib/colonias";
 import { PALETA_COLORES } from "@/lib/paleta-colores";
 import { houseSchema } from "@/lib/validations";
 import { formatFolio } from "@/lib/folio";
@@ -208,6 +208,12 @@ export function HouseForm({
               Toca el mapa, arrastra el pin o usa tu ubicación: Mapbox rellena la dirección
               automáticamente.
             </p>
+            {isPlaceholderCoyoacanPin(values.latitude, values.longitude) && (
+              <p className="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-900">
+                El pin sigue en el centro de Coyoacán. Muévelo a la casa de la colonia o el globo
+                no aparecerá en el mapa de esa colonia.
+              </p>
+            )}
             <LocationPicker
               latitude={values.latitude}
               longitude={values.longitude}
