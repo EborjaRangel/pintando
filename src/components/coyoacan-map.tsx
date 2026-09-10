@@ -175,6 +175,50 @@ function screenOffsetForCluster(slot: ClusterSlot | undefined): { x: number; y: 
   return { x: Math.cos(angle) * radius, y: Math.sin(angle) * radius };
 }
 
+type ScreenPoint = { id: string; x: number; y: number };
+
+function clampScreen(value: number, min: number, max: number): number {
+  if (max <= min) return min;
+  return Math.min(max, Math.max(min, value));
+}
+
+/** Separa globos que se tapan al ver la colonia, para que el Excel y el mapa coincidan. */
+function separateScreenPositions(
+  points: ScreenPoint[],
+  minSep: number,
+  bounds: { width: number; height: number }
+): ScreenPoint[] {
+  if (points.length < 2 || minSep <= 0) return points;
+  const pts = points.map((point) => ({ ...point }));
+  const padX = 18;
+  const padY = 28;
+  const rounds = Math.min(48, 10 + Math.ceil(pts.length / 6));
+  for (let round = 0; round < rounds; round++) {
+    for (let i = 0; i < pts.length; i++) {
+      for (let j = i + 1; j < pts.length; j++) {
+        const dx = pts[j].x - pts[i].x;
+        const dy = pts[j].y - pts[i].y;
+        const dist = Math.hypot(dx, dy) || 0.01;
+        if (dist >= minSep) continue;
+        const push = (minSep - dist) / 2;
+        const ux = dx / dist;
+        const uy = dy / dist;
+        pts[i].x -= ux * push;
+        pts[i].y -= uy * push;
+        pts[j].x += ux * push;
+        pts[j].y += uy * push;
+      }
+    }
+    if (bounds.width > 64 && bounds.height > 64) {
+      for (const pt of pts) {
+        pt.x = clampScreen(pt.x, padX, bounds.width - padX);
+        pt.y = clampScreen(pt.y, padY, bounds.height - padY);
+      }
+    }
+  }
+  return pts;
+}
+
 function featureName(feature: GeoJSON.Feature | undefined): string {
   return String(feature?.properties?.name ?? "");
 }
@@ -506,18 +550,34 @@ export function CoyoacanMap({ houses }: Props) {
     const sync = () => {
       const width = overlayRef.current?.clientWidth ?? containerRef.current?.clientWidth ?? 0;
       const height = overlayRef.current?.clientHeight ?? containerRef.current?.clientHeight ?? 0;
+      const minSep = showConsecutivoNumbers
+        ? filtered.features.length > 80
+          ? 32
+          : 36
+        : 12;
+      const placed = separateScreenPositions(
+        filtered.features.map((feature) => {
+          const point = map.project(feature.geometry.coordinates);
+          const offset = screenOffsetForCluster(clusterSlots.get(feature.properties.id));
+          return {
+            id: feature.properties.id,
+            x: point.x + offset.x,
+            y: point.y + offset.y,
+          };
+        }),
+        minSep,
+        { width, height }
+      );
+      const byId = new Map(placed.map((point) => [point.id, point]));
       for (const feature of filtered.features) {
         const el = balloonElsRef.current.get(feature.properties.id);
-        if (!el) continue;
-        const point = map.project(feature.geometry.coordinates);
-        const offset = screenOffsetForCluster(clusterSlots.get(feature.properties.id));
-        const x = point.x + offset.x;
-        const y = point.y + offset.y;
+        const pos = byId.get(feature.properties.id);
+        if (!el || !pos) continue;
         const off =
-          x < -48 ||
-          y < -48 ||
-          x > width + 48 ||
-          y > height + 48;
+          pos.x < -48 ||
+          pos.y < -48 ||
+          pos.x > width + 48 ||
+          pos.y > height + 48;
         if (off) {
           el.style.visibility = "hidden";
           el.style.pointerEvents = "none";
@@ -525,7 +585,7 @@ export function CoyoacanMap({ houses }: Props) {
         }
         el.style.visibility = "visible";
         el.style.pointerEvents = "auto";
-        el.style.transform = `translate(${Math.round(x)}px, ${Math.round(y)}px) translate(-50%, -100%)`;
+        el.style.transform = `translate(${Math.round(pos.x)}px, ${Math.round(pos.y)}px) translate(-50%, -100%)`;
       }
     };
 
@@ -545,7 +605,7 @@ export function CoyoacanMap({ houses }: Props) {
       map.off("move", onMove);
       map.off("resize", onMove);
     };
-  }, [filtered, mapVersion, clusterSlots]);
+  }, [filtered, mapVersion, clusterSlots, showConsecutivoNumbers]);
 
   return (
     <div className="space-y-3 sm:space-y-4">
