@@ -15,6 +15,7 @@ import {
   canSeeAllHouses,
   excelLabelForRole,
   excelScopeForRole,
+  isAdmin,
   roleLabel,
 } from "@/lib/roles";
 
@@ -113,6 +114,8 @@ export default async function CasasPage() {
           canExport={canExport}
           exportScope={exportScope}
           exportLabel={exportLabel}
+          showPhotoLink={isAdmin(role)}
+          enableSearch={isAdmin(role)}
         />
       )}
     </div>

@@ -76,6 +76,8 @@ export function CasasTable({
   canExport = false,
   exportScope = "authorized",
   exportLabel = "Excel (autorizadas)",
+  showPhotoLink = false,
+  enableSearch = false,
 }: {
   houses: CasaRow[];
   showCapturista: boolean;
@@ -84,6 +86,10 @@ export function CasasTable({
   canExport?: boolean;
   exportScope?: ExcelExportScope;
   exportLabel?: string;
+  /** Solo Admin: enlace directo a las fotos del registro. */
+  showPhotoLink?: boolean;
+  /** Solo Admin: buscar por folio o número de globo. */
+  enableSearch?: boolean;
 }) {
   function showAuthControl(house: CasaRow) {
     if (canAuthorize) return true;
@@ -92,13 +98,33 @@ export function CasasTable({
   }
   const showRowSelect = canExport && exportScope !== "authorized";
   const [selected, setSelected] = useState<string[]>([]);
+  const [query, setQuery] = useState("");
   const { selection: coloniaSelection } = useColoniaSelection();
 
-  const allSelected = houses.length > 0 && selected.length === houses.length;
+  const visibleHouses = useMemo(() => {
+    if (!enableSearch) return houses;
+    const q = query.trim().toLowerCase();
+    if (!q) return houses;
+    const digits = q.replace(/^pc-?/i, "").replace(/\D/g, "");
+    const numeric = digits ? Number(digits) : Number.NaN;
+    return houses.filter((house) => {
+      const folioText = formatFolio(house.folio).toLowerCase();
+      if (folioText.includes(q) || String(house.folio) === q || String(house.consecutivo) === q) {
+        return true;
+      }
+      return (
+        !Number.isNaN(numeric) &&
+        (house.folio === numeric || house.consecutivo === numeric)
+      );
+    });
+  }, [houses, query, enableSearch]);
+
+  const allSelected =
+    visibleHouses.length > 0 && visibleHouses.every((house) => selected.includes(house.id));
   const selectedIds = useMemo(() => selected, [selected]);
 
   function toggleAll() {
-    setSelected(allSelected ? [] : houses.map((h) => h.id));
+    setSelected(allSelected ? [] : visibleHouses.map((h) => h.id));
   }
 
   function toggleOne(id: string) {
@@ -143,6 +169,26 @@ export function CasasTable({
         </div>
       )}
 
+      {enableSearch && (
+        <label className="block max-w-md space-y-1">
+          <span className="label">Buscar por folio o número de globo</span>
+          <input
+            type="search"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Ej. PC-000012 o 12"
+            className="field"
+            autoComplete="off"
+          />
+        </label>
+      )}
+
+      {enableSearch && query.trim() && visibleHouses.length === 0 && (
+        <p className="text-sm text-[var(--muted)]">
+          No hay registros con ese folio o número de globo.
+        </p>
+      )}
+
       {/* Mobile cards */}
       <div className="space-y-3 md:hidden">
         {showRowSelect && (
@@ -158,7 +204,7 @@ export function CasasTable({
           </label>
         )}
 
-        {houses.map((house) => (
+        {visibleHouses.map((house) => (
           <article
             key={house.id}
             className="rounded-xl border border-[var(--line)] bg-white p-4 shadow-sm"
@@ -220,9 +266,19 @@ export function CasasTable({
                     {...authProps(house)}
                   />
                 )}
-                <Link href={`/casas/${house.id}`} className="btn-secondary mt-1 w-full">
-                  Abrir
-                </Link>
+                <div className="mt-1 flex flex-col gap-2 sm:flex-row">
+                  {showPhotoLink && (
+                    <Link
+                      href={`/casas/${house.id}#fotos`}
+                      className="btn-primary w-full sm:w-auto"
+                    >
+                      Ver fotos
+                    </Link>
+                  )}
+                  <Link href={`/casas/${house.id}`} className="btn-secondary w-full sm:w-auto">
+                    Abrir
+                  </Link>
+                </div>
               </div>
             </div>
           </article>
@@ -261,7 +317,7 @@ export function CasasTable({
             </tr>
           </thead>
           <tbody>
-            {houses.map((house) => (
+            {visibleHouses.map((house) => (
               <tr key={house.id} className="border-t border-[var(--line)]">
                 {showRowSelect && (
                   <td className="px-4 py-3">
@@ -315,12 +371,22 @@ export function CasasTable({
                 </td>
                 {showCapturista && <td className="px-4 py-3">{house.capturista}</td>}
                 <td className="px-4 py-3 text-right">
-                  <Link
-                    href={`/casas/${house.id}`}
-                    className="inline-flex min-h-11 items-center rounded-lg px-3 text-[var(--accent-ink)] underline"
-                  >
-                    Abrir
-                  </Link>
+                  <div className="flex flex-wrap items-center justify-end gap-2">
+                    {showPhotoLink && (
+                      <Link
+                        href={`/casas/${house.id}#fotos`}
+                        className="inline-flex min-h-11 items-center rounded-lg bg-[var(--wa-teal)] px-3 text-sm font-medium text-white hover:bg-[var(--wa-dark)]"
+                      >
+                        Ver fotos
+                      </Link>
+                    )}
+                    <Link
+                      href={`/casas/${house.id}`}
+                      className="inline-flex min-h-11 items-center rounded-lg px-3 text-[var(--accent-ink)] underline"
+                    >
+                      Abrir
+                    </Link>
+                  </div>
                 </td>
               </tr>
             ))}

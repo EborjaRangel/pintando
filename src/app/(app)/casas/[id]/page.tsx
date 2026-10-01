@@ -137,7 +137,7 @@ export default async function CasaDetallePage({ params }: Props) {
         />
       </div>
 
-      <section className="panel">
+      <section id="fotos" className="panel scroll-mt-28">
         <HouseUploads
           houseId={house.id}
           photos={house.photos}
