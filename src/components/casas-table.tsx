@@ -246,6 +246,14 @@ export function CasasTable({
                   <span className="text-xs text-[var(--muted)]">
                     Fotos {house.photosCount}/3 · Comp. {house.hasComprobante ? "Sí" : "No"}
                   </span>
+                  {showPhotoLink && (
+                    <Link
+                      href={`/casas/${house.id}#fotos`}
+                      className="text-sm font-semibold text-[var(--wa-teal)] underline"
+                    >
+                      Ver fotos
+                    </Link>
+                  )}
                 </div>
                 <div className="text-sm">
                   <ColorSwatches
@@ -313,7 +321,7 @@ export function CasasTable({
               <th className="px-4 py-3 font-medium">Estado</th>
               <th className="px-4 py-3 font-medium">Autorización</th>
               {showCapturista && <th className="px-4 py-3 font-medium">Capturista</th>}
-              <th className="px-4 py-3 font-medium" />
+              <th className="sticky right-0 bg-[var(--surface-2)] px-4 py-3 font-medium shadow-[-8px_0_8px_-8px_rgba(0,0,0,0.25)]" />
             </tr>
           </thead>
           <tbody>
@@ -349,7 +357,19 @@ export function CasasTable({
                     colorHexes={house.colorHexes}
                   />
                 </td>
-                <td className="px-4 py-3">{house.photosCount}/3</td>
+                <td className="whitespace-nowrap px-4 py-3">
+                  <div className="flex flex-col items-start gap-1">
+                    <span>{house.photosCount}/3</span>
+                    {showPhotoLink && (
+                      <Link
+                        href={`/casas/${house.id}#fotos`}
+                        className="font-semibold text-[var(--wa-teal)] underline"
+                      >
+                        Ver fotos
+                      </Link>
+                    )}
+                  </div>
+                </td>
                 <td className="px-4 py-3">{house.hasComprobante ? "Sí" : "No"}</td>
                 <td className="px-4 py-3">
                   <StatusBadge status={house.status} />
@@ -370,7 +390,7 @@ export function CasasTable({
                   )}
                 </td>
                 {showCapturista && <td className="px-4 py-3">{house.capturista}</td>}
-                <td className="px-4 py-3 text-right">
+                <td className="sticky right-0 bg-white px-4 py-3 text-right shadow-[-8px_0_8px_-8px_rgba(0,0,0,0.25)]">
                   <div className="flex flex-wrap items-center justify-end gap-2">
                     {showPhotoLink && (
                       <Link
