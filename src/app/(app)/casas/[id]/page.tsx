@@ -14,7 +14,7 @@ import { HouseForm } from "@/components/house-form";
 import { getColorsFromNotes, PALETA_COLORES, serializeColors } from "@/lib/paleta-colores";
 import { formatFolio } from "@/lib/folio";
 import { canAccessHouse } from "@/lib/house-access";
-import { canAuthorizeHouses, canRevokeAuthorization } from "@/lib/roles";
+import { canAuthorizeHouses, canRevokeAuthorization, isAdmin } from "@/lib/roles";
 import { AuthorizeHouseButton } from "@/components/authorize-house-button";
 import { loadConsecutivosById } from "@/lib/consecutivo";
 
@@ -142,6 +142,7 @@ export default async function CasaDetallePage({ params }: Props) {
           houseId={house.id}
           photos={house.photos}
           comprobanteUrl={house.comprobanteUrl}
+          canSavePhotos={isAdmin(role)}
         />
       </section>
 

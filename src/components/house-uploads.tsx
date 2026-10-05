@@ -11,9 +11,11 @@ type Props = {
   houseId: string;
   photos: Photo[];
   comprobanteUrl: string | null;
+  /** Solo Admin: tocar la foto la guarda en el dispositivo. */
+  canSavePhotos?: boolean;
 };
 
-export function HouseUploads({ houseId, photos, comprobanteUrl }: Props) {
+export function HouseUploads({ houseId, photos, comprobanteUrl, canSavePhotos = false }: Props) {
   const router = useRouter();
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -51,8 +53,9 @@ export function HouseUploads({ houseId, photos, comprobanteUrl }: Props) {
       <section className="space-y-3">
         <h2 className="section-title">Fotografías (3 requeridas)</h2>
         <p className="text-sm text-[var(--muted)]">
-          Sube fachada, lateral y contexto. Las fotos se optimizan solas (máx. ~1600px) antes de
-          guardarlas.
+          {canSavePhotos
+            ? "Toca cada foto para guardarla en este dispositivo."
+            : "Sube fachada, lateral y contexto. Las fotos se optimizan solas (máx. ~1600px) antes de guardarlas."}
         </p>
         <div className="grid gap-4 sm:grid-cols-3">
           {[1, 2, 3].map((slot) => {
@@ -64,13 +67,33 @@ export function HouseUploads({ houseId, photos, comprobanteUrl }: Props) {
               >
                 <div className="relative aspect-[4/3] bg-[var(--surface-2)]">
                   {photo ? (
-                    <Image
-                      src={photo.url}
-                      alt={`Foto ${slot}`}
-                      fill
-                      className="object-cover"
-                      unoptimized
-                    />
+                    canSavePhotos ? (
+                      <a
+                        href={`/api/houses/${houseId}/photos/${slot}/download`}
+                        download={`foto-${slot}.jpg`}
+                        className="absolute inset-0 block"
+                        title="Guardar foto en este dispositivo"
+                      >
+                        <Image
+                          src={photo.url}
+                          alt={`Foto ${slot}. Toca para guardar.`}
+                          fill
+                          className="object-cover"
+                          unoptimized
+                        />
+                        <span className="absolute inset-x-0 bottom-0 bg-[var(--wa-dark)]/80 px-2 py-2 text-center text-xs font-semibold text-white">
+                          Toca para guardar
+                        </span>
+                      </a>
+                    ) : (
+                      <Image
+                        src={photo.url}
+                        alt={`Foto ${slot}`}
+                        fill
+                        className="object-cover"
+                        unoptimized
+                      />
+                    )
                   ) : (
                     <div className="flex h-full items-center justify-center text-sm text-[var(--muted)]">
                       Sin foto {slot}
