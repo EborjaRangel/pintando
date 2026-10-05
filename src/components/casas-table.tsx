@@ -12,6 +12,7 @@ import {
 } from "@/lib/house-status";
 import type { ExcelExportScope } from "@/lib/roles";
 import { formatFolio } from "@/lib/folio";
+import { normalizeColoniaKey } from "@/lib/colonias";
 
 export type CasaRow = {
   id: string;
@@ -99,15 +100,27 @@ export function CasasTable({
   const showRowSelect = canExport && exportScope !== "authorized";
   const [selected, setSelected] = useState<string[]>([]);
   const [query, setQuery] = useState("");
+  const [coloniaKey, setColoniaKey] = useState("");
   const { selection: coloniaSelection } = useColoniaSelection();
+
+  const coloniaOptions = useMemo(() => {
+    const names = new Set<string>();
+    for (const house of houses) names.add(house.colonia);
+    return [...names].sort((a, b) => a.localeCompare(b, "es"));
+  }, [houses]);
+
+  const scopedHouses = useMemo(() => {
+    if (!enableSearch || !coloniaKey) return houses;
+    return houses.filter((house) => normalizeColoniaKey(house.colonia) === coloniaKey);
+  }, [houses, coloniaKey, enableSearch]);
 
   const visibleHouses = useMemo(() => {
     if (!enableSearch) return houses;
     const q = query.trim().toLowerCase();
-    if (!q) return houses;
+    if (!q) return scopedHouses;
     const digits = q.replace(/^pc-?/i, "").replace(/\D/g, "");
     const numeric = digits ? Number(digits) : Number.NaN;
-    return houses.filter((house) => {
+    return scopedHouses.filter((house) => {
       const folioText = formatFolio(house.folio).toLowerCase();
       if (folioText.includes(q) || String(house.folio) === q || String(house.consecutivo) === q) {
         return true;
@@ -117,7 +130,7 @@ export function CasasTable({
         (house.folio === numeric || house.consecutivo === numeric)
       );
     });
-  }, [houses, query, enableSearch]);
+  }, [scopedHouses, query, enableSearch]);
 
   const allSelected =
     visibleHouses.length > 0 && visibleHouses.every((house) => selected.includes(house.id));
@@ -170,22 +183,43 @@ export function CasasTable({
       )}
 
       {enableSearch && (
-        <label className="block max-w-md space-y-1">
-          <span className="label">Buscar por folio o número de globo</span>
-          <input
-            type="search"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="Ej. PC-000012 o 12"
-            className="field"
-            autoComplete="off"
-          />
-        </label>
+        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
+          <label className="block min-w-[min(100%,18rem)] flex-1 space-y-1 sm:max-w-sm">
+            <span className="label">Colonia</span>
+            <select
+              className="field"
+              value={coloniaKey}
+              onChange={(event) => setColoniaKey(event.target.value)}
+            >
+              <option value="">Todas las casas</option>
+              {coloniaOptions.map((colonia) => (
+                <option key={colonia} value={normalizeColoniaKey(colonia)}>
+                  {colonia}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="block min-w-[min(100%,18rem)] flex-1 space-y-1 sm:max-w-md">
+            <span className="label">Buscar por folio o número de globo</span>
+            <input
+              type="search"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Ej. PC-000012 o 12"
+              className="field"
+              autoComplete="off"
+            />
+          </label>
+        </div>
       )}
 
-      {enableSearch && query.trim() && visibleHouses.length === 0 && (
+      {enableSearch && visibleHouses.length === 0 && (
         <p className="text-sm text-[var(--muted)]">
-          No hay registros con ese folio o número de globo.
+          {query.trim()
+            ? coloniaKey
+              ? "No hay registros con ese folio o número de globo en la colonia seleccionada."
+              : "No hay registros con ese folio o número de globo."
+            : "No hay casas en la colonia seleccionada."}
         </p>
       )}
 
