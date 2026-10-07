@@ -19,6 +19,7 @@ import { postUpload } from "@/lib/upload-client";
 export type HouseFormValues = {
   address: string;
   colonia: string;
+  direccionColoniaManual: string;
   latitude: number;
   longitude: number;
   notes: string;
@@ -36,6 +37,7 @@ type Props = {
 const defaults: HouseFormValues = {
   address: "",
   colonia: COLONIAS_COYOACAN[0],
+  direccionColoniaManual: "",
   latitude: COYOACAN_CENTER.latitude,
   longitude: COYOACAN_CENTER.longitude,
   notes: PALETA_COLORES[0].name,
@@ -180,15 +182,13 @@ export function HouseForm({
               <p className="text-xs font-semibold uppercase tracking-wide text-[var(--wa-teal)]">
                 Consecutivo por colonia
               </p>
-              {mode === "edit" &&
-              consecutivo != null &&
-              values.colonia === (initialValues?.colonia ?? values.colonia) ? (
+              {mode === "edit" && consecutivo != null ? (
                 <>
                   <p className="mt-1 font-[family-name:var(--font-display)] text-xl font-semibold text-[var(--wa-dark)]">
                     {consecutivo}
                   </p>
                   <p className="mt-1 text-xs text-[var(--muted)]">
-                    {values.colonia}. Si cambias de colonia se asigna uno nuevo.
+                    {values.colonia}. La colonia no se puede cambiar.
                   </p>
                 </>
               ) : (
@@ -205,8 +205,8 @@ export function HouseForm({
           <fieldset className="space-y-3">
             <legend className="label">Ubicación en el mapa</legend>
             <p className="text-sm text-[var(--muted)]">
-              Toca el mapa, arrastra el pin o usa tu ubicación: Mapbox rellena la dirección
-              automáticamente.
+              Toca el mapa, arrastra el pin o usa tu ubicación. El mapa llena la dirección y la
+              colonia, y esos datos no se pueden modificar.
             </p>
             {isPlaceholderCoyoacanPin(values.latitude, values.longitude) && (
               <p className="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-900">
@@ -220,6 +220,7 @@ export function HouseForm({
               onChange={({ latitude, longitude, address, colonia }) => {
                 setFieldValue("latitude", latitude);
                 setFieldValue("longitude", longitude);
+                if (mode === "edit") return;
                 if (address) {
                   setFieldValue("address", address);
                 }
@@ -237,22 +238,36 @@ export function HouseForm({
               <span className="label">Dirección</span>
               <Field
                 name="address"
-                className="field"
+                readOnly
+                className="field cursor-not-allowed bg-[var(--surface-2)]"
                 placeholder="Se completa al seleccionar el pin en el mapa"
               />
+              <p className="text-xs text-[var(--muted)]">La llena el mapa. No se puede modificar.</p>
               <ErrorMessage name="address" component="p" className="error" />
             </label>
 
             <label className="space-y-1 sm:col-span-2">
               <span className="label">Colonia</span>
-              <Field as="select" name="colonia" className="field">
-                {COLONIAS_COYOACAN.map((colonia) => (
-                  <option key={colonia} value={colonia}>
-                    {colonia}
-                  </option>
-                ))}
-              </Field>
+              <Field
+                name="colonia"
+                readOnly
+                className="field cursor-not-allowed bg-[var(--surface-2)]"
+              />
+              <p className="text-xs text-[var(--muted)]">La llena el mapa. No se puede modificar.</p>
               <ErrorMessage name="colonia" component="p" className="error" />
+            </label>
+
+            <label className="space-y-1 sm:col-span-2">
+              <span className="label">Dirección y colonia manual</span>
+              <Field
+                name="direccionColoniaManual"
+                className="field"
+                placeholder="Opcional"
+              />
+              <p className="text-xs text-[var(--muted)]">
+                Opcional. No cambia la dirección ni la colonia del mapa.
+              </p>
+              <ErrorMessage name="direccionColoniaManual" component="p" className="error" />
             </label>
           </div>
 

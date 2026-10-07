@@ -36,8 +36,10 @@ model House {
   folio              Int       @unique @default(autoincrement())
   /// Consecutivo por colonia (1…n), según fecha/hora de levantamiento.
   consecutivo        Int       @default(0)
-  address            String
-  colonia            String
+  address                String
+  colonia                String
+  /// Texto libre opcional. No sustituye la dirección ni la colonia del mapa.
+  direccionColoniaManual String?
   latitude           Float
   longitude          Float
   comprobanteUrl     String?

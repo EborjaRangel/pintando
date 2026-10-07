@@ -62,6 +62,7 @@ export async function POST(request: Request) {
           data: {
             address,
             colonia: data.colonia,
+            direccionColoniaManual: data.direccionColoniaManual || null,
             consecutivo,
             latitude: data.latitude,
             longitude: data.longitude,

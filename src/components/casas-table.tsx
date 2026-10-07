@@ -13,6 +13,63 @@ import {
 import type { ExcelExportScope } from "@/lib/roles";
 import { formatFolio } from "@/lib/folio";
 import { normalizeColoniaKey } from "@/lib/colonias";
+import type { DirigenteBusqueda } from "@/lib/dirigentes-por-colonia";
+
+/** Compara calle y número sin acentos, mayúsculas ni puntuación. */
+function normalizeAddressSearch(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+function isStreetSearch(query: string) {
+  const q = query.trim().toLowerCase();
+  if (/^pc-?\d*$/i.test(q) || /^\d+$/.test(q)) return false;
+  return /[a-z]/.test(normalizeAddressSearch(query));
+}
+
+function addressMatchesStreet(address: string, query: string) {
+  const needle = normalizeAddressSearch(query);
+  if (!needle || !isStreetSearch(query)) return false;
+  return normalizeAddressSearch(address).includes(needle);
+}
+
+function personFields(person: DirigenteBusqueda) {
+  return [person.nombre, person.primerApellido, person.segundoApellido]
+    .map((part) => normalizeAddressSearch(part))
+    .filter((part) => part.length >= 2);
+}
+
+/** Nombre, apellido paterno o materno, o una combinación de esos campos. */
+function personMatches(person: DirigenteBusqueda, query: string) {
+  const q = normalizeAddressSearch(query);
+  if (q.length < 3 || !/[a-z]/.test(q) || /\d/.test(q)) return false;
+  const fields = personFields(person);
+  if (fields.length === 0) return false;
+  const tokens = q.split(" ").filter((token) => token.length >= 2);
+  if (tokens.length === 0) return false;
+  if (tokens.length === 1) {
+    const token = tokens[0];
+    return fields.some((field) => field === token || field.startsWith(token));
+  }
+  if (fields.join(" ").includes(q)) return true;
+  const used = new Set<number>();
+  return tokens.every((token) => {
+    const idx = fields.findIndex(
+      (field, index) => !used.has(index) && (field === token || field.startsWith(token))
+    );
+    if (idx < 0) return false;
+    used.add(idx);
+    return true;
+  });
+}
+
+function dirigenteLabel(person: DirigenteBusqueda) {
+  return [person.nombre, person.primerApellido, person.segundoApellido].filter(Boolean).join(" ");
+}
 
 export type CasaRow = {
   id: string;
@@ -79,6 +136,7 @@ export function CasasTable({
   exportLabel = "Excel (autorizadas)",
   showPhotoLink = false,
   enableSearch = false,
+  dirigentesByColonia = {},
 }: {
   houses: CasaRow[];
   showCapturista: boolean;
@@ -89,8 +147,10 @@ export function CasasTable({
   exportLabel?: string;
   /** Solo Admin: enlace directo a las fotos del registro. */
   showPhotoLink?: boolean;
-  /** Solo Admin: buscar por folio o número de globo. */
+  /** Solo Admin: folio, globo, calle y número, o dirigente de la colonia. */
   enableSearch?: boolean;
+  /** Dirigentes activos por clave de colonia. */
+  dirigentesByColonia?: Record<string, DirigenteBusqueda[]>;
 }) {
   function showAuthControl(house: CasaRow) {
     if (canAuthorize) return true;
@@ -114,10 +174,45 @@ export function CasasTable({
     return houses.filter((house) => normalizeColoniaKey(house.colonia) === coloniaKey);
   }, [houses, coloniaKey, enableSearch]);
 
+  const matchedDirigentes = useMemo(() => {
+    if (!enableSearch || !isStreetSearch(query) || /\d/.test(query)) return [];
+    const groups = coloniaKey
+      ? [[coloniaKey, dirigentesByColonia[coloniaKey] ?? []] as const]
+      : Object.entries(dirigentesByColonia);
+    const labels = new Set<string>();
+    for (const [, people] of groups) {
+      for (const person of people) {
+        if (personMatches(person, query)) labels.add(dirigenteLabel(person));
+      }
+    }
+    return [...labels].sort((a, b) => a.localeCompare(b, "es"));
+  }, [coloniaKey, dirigentesByColonia, enableSearch, query]);
+
   const visibleHouses = useMemo(() => {
     if (!enableSearch) return houses;
     const q = query.trim().toLowerCase();
     if (!q) return scopedHouses;
+    if (isStreetSearch(q)) {
+      const nameKeys = new Set<string>();
+      if (!/\d/.test(q)) {
+        const groups = coloniaKey
+          ? [[coloniaKey, dirigentesByColonia[coloniaKey] ?? []] as const]
+          : Object.entries(dirigentesByColonia);
+        for (const [key, people] of groups) {
+          if (people.some((person) => personMatches(person, q))) nameKeys.add(key);
+        }
+      }
+      if (nameKeys.size > 0) {
+        const pool = scopedHouses.filter((house) =>
+          nameKeys.has(normalizeColoniaKey(house.colonia))
+        );
+        const byAddress = pool.filter((house) => addressMatchesStreet(house.address, q));
+        if (byAddress.length > 0) return byAddress;
+        return pool;
+      }
+      if (!coloniaKey) return [];
+      return scopedHouses.filter((house) => addressMatchesStreet(house.address, q));
+    }
     const digits = q.replace(/^pc-?/i, "").replace(/\D/g, "");
     const numeric = digits ? Number(digits) : Number.NaN;
     return scopedHouses.filter((house) => {
@@ -130,7 +225,7 @@ export function CasasTable({
         (house.folio === numeric || house.consecutivo === numeric)
       );
     });
-  }, [scopedHouses, query, enableSearch]);
+  }, [scopedHouses, query, enableSearch, coloniaKey, dirigentesByColonia]);
 
   const allSelected =
     visibleHouses.length > 0 && visibleHouses.every((house) => selected.includes(house.id));
@@ -200,25 +295,39 @@ export function CasasTable({
             </select>
           </label>
           <label className="block min-w-[min(100%,18rem)] flex-1 space-y-1 sm:max-w-md">
-            <span className="label">Buscar por folio o número de globo</span>
+            <span className="label">Buscar por folio, globo, dirección o dirigente</span>
             <input
               type="search"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="Ej. PC-000012 o 12"
+              placeholder="Ej. PC-000012, Hidalgo 65 o García López"
               className="field"
               autoComplete="off"
             />
+            <p className="text-xs text-[var(--muted)]">
+              Calle y número, o el nombre y apellidos del dirigente, dentro de la colonia
+              seleccionada.
+            </p>
           </label>
         </div>
+      )}
+
+      {enableSearch && matchedDirigentes.length > 0 && (
+        <p className="text-sm text-[var(--ink)]">
+          Dirigentes de la colonia:{" "}
+          {matchedDirigentes.slice(0, 8).join(" · ")}
+          {matchedDirigentes.length > 8 ? ` · y ${matchedDirigentes.length - 8} más` : ""}
+        </p>
       )}
 
       {enableSearch && visibleHouses.length === 0 && (
         <p className="text-sm text-[var(--muted)]">
           {query.trim()
-            ? coloniaKey
-              ? "No hay registros con ese folio o número de globo en la colonia seleccionada."
-              : "No hay registros con ese folio o número de globo."
+            ? isStreetSearch(query) && !coloniaKey
+              ? "Para buscar por calle y número, selecciona la colonia. El dirigente se busca por nombre o apellidos."
+              : coloniaKey
+                ? "No hay registros con ese folio, número de globo, dirección o dirigente en la colonia seleccionada."
+                : "No hay registros con ese folio o número de globo."
             : "No hay casas en la colonia seleccionada."}
         </p>
       )}

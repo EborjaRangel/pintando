@@ -72,6 +72,11 @@ export default async function CasaDetallePage({ params }: Props) {
           <p className="break-words text-sm text-[var(--muted)] sm:text-base">
             {house.colonia} · {house.latitude.toFixed(5)}, {house.longitude.toFixed(5)}
           </p>
+          {house.direccionColoniaManual ? (
+            <p className="break-words text-sm text-[var(--ink)]">
+              Dirección y colonia manual: {house.direccionColoniaManual}
+            </p>
+          ) : null}
           <div className="flex flex-wrap items-center gap-2">
             <StatusBadge status={status} />
             {house.autorizado ? (
@@ -156,6 +161,7 @@ export default async function CasaDetallePage({ params }: Props) {
           initialValues={{
             address: house.address,
             colonia: house.colonia,
+            direccionColoniaManual: house.direccionColoniaManual ?? "",
             latitude: house.latitude,
             longitude: house.longitude,
             notes:

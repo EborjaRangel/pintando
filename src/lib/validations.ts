@@ -21,6 +21,10 @@ export const houseSchema = Yup.object({
   colonia: Yup.string()
     .oneOf([...COLONIAS_COYOACAN], "Selecciona una colonia de Coyoacán")
     .required("La colonia es obligatoria"),
+  direccionColoniaManual: Yup.string()
+    .transform((value) => (typeof value === "string" ? value.trim() : ""))
+    .max(500, "Máximo 500 caracteres")
+    .default(""),
   latitude: Yup.number()
     .min(19.25, "Latitud fuera de Coyoacán")
     .max(19.4, "Latitud fuera de Coyoacán")

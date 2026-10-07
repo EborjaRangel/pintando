@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { getHouseStatus } from "@/lib/house-status";
 import { getColorsFromNotes } from "@/lib/paleta-colores";
 import { CasasTable } from "@/components/casas-table";
+import { loadDirigentesByColonia } from "@/lib/dirigentes-por-colonia";
 import { ExportExcelButton } from "@/components/export-excel-button";
 import { housesWhereForRole } from "@/lib/house-access";
 import { loadConsecutivosById } from "@/lib/consecutivo";
@@ -23,6 +24,8 @@ export default async function CasasPage() {
   const session = await getServerSession(authOptions);
   const role = session!.user.role;
   const where = housesWhereForRole(role, session!.user.id);
+
+  const dirigentesByColonia = isAdmin(role) ? await loadDirigentesByColonia() : {};
 
   const houses = await prisma.house.findMany({
     where,
@@ -116,6 +119,7 @@ export default async function CasasPage() {
           exportLabel={exportLabel}
           showPhotoLink={isAdmin(role)}
           enableSearch={isAdmin(role)}
+          dirigentesByColonia={dirigentesByColonia}
         />
       )}
     </div>
