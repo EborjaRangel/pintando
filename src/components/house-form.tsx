@@ -205,8 +205,8 @@ export function HouseForm({
           <fieldset className="space-y-3">
             <legend className="label">Ubicación en el mapa</legend>
             <p className="text-sm text-[var(--muted)]">
-              Toca el mapa, arrastra el pin o usa tu ubicación. El mapa llena la dirección y la
-              colonia, y esos datos no se pueden modificar.
+              Toca el mapa, arrastra el pin o usa tu ubicación. La colonia sale del mapa oficial
+              de Coyoacán. La dirección y la colonia no se pueden modificar a mano.
             </p>
             {isPlaceholderCoyoacanPin(values.latitude, values.longitude) && (
               <p className="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-900">
@@ -253,7 +253,10 @@ export function HouseForm({
                 readOnly
                 className="field cursor-not-allowed bg-[var(--surface-2)]"
               />
-              <p className="text-xs text-[var(--muted)]">La llena el mapa. No se puede modificar.</p>
+              <p className="text-xs text-[var(--muted)]">
+                Sale del polígono oficial de la colonia, no del nombre que propone el mapa. No se
+                puede modificar.
+              </p>
               <ErrorMessage name="colonia" component="p" className="error" />
             </label>
 

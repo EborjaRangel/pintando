@@ -31,6 +31,7 @@ export function LocationPicker({ latitude, longitude, onChange }: Props) {
   const markerRef = useRef<MarkerLike | null>(null);
   const onChangeRef = useRef(onChange);
   const [geoError, setGeoError] = useState<string | null>(null);
+  const [addressNote, setAddressNote] = useState<string | null>(null);
   const [mapError, setMapError] = useState<string | null>(null);
   const [geoLoading, setGeoLoading] = useState(false);
   const [provider, setProvider] = useState<"mapbox" | "maplibre" | null>(null);
@@ -44,6 +45,11 @@ export function LocationPicker({ latitude, longitude, onChange }: Props) {
     setGeoError(null);
     try {
       const result = await reverseGeocodeMapbox(lng, lat);
+      setAddressNote(
+        result.snappedMeters != null && result.snappedMeters > 15
+          ? `El número de la calle es el más cercano en el mapa, a ${Math.round(result.snappedMeters)} m del pin. Si esta puerta es otra, anótala en Dirección y colonia manual.`
+          : null
+      );
       onChangeRef.current({
         latitude: lat,
         longitude: lng,
@@ -55,6 +61,7 @@ export function LocationPicker({ latitude, longitude, onChange }: Props) {
         mapRef.current?.flyTo({ center: [lng, lat], zoom: 16 });
       }
     } catch (err) {
+      setAddressNote(null);
       onChangeRef.current({
         latitude: lat,
         longitude: lng,
@@ -198,6 +205,9 @@ export function LocationPicker({ latitude, longitude, onChange }: Props) {
       </div>
       {geoLoading && (
         <p className="text-sm text-[var(--accent-ink)]">Obteniendo dirección del pin seleccionado…</p>
+      )}
+      {addressNote && (
+        <p className="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-900">{addressNote}</p>
       )}
       {geoError && <p className="text-sm text-orange-700">{geoError}</p>}
       {mapError && <p className="text-sm text-amber-800">{mapError}</p>}

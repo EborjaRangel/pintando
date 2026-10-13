@@ -71,7 +71,14 @@ export async function PUT(request: Request, { params }: Params) {
 
     const address = house.address;
     const colonia = house.colonia;
-    const duplicate = await findDuplicateHouse(prisma, colonia, address, id);
+    const duplicate = await findDuplicateHouse(
+      prisma,
+      colonia,
+      address,
+      data.latitude,
+      data.longitude,
+      id
+    );
     if (duplicate) {
       return NextResponse.json(
         {

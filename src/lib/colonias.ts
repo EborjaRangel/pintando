@@ -140,6 +140,13 @@ export function coloniasAreSame(a: string, b: string): boolean {
   return normalizeColoniaKey(a) === normalizeColoniaKey(b);
 }
 
+/** Nombre del catálogo que corresponde a un polígono o a un texto del mapa. */
+export function coloniaCatalogName(name: string | null | undefined): string | undefined {
+  const key = normalizeColoniaKey(name ?? "");
+  if (!key) return undefined;
+  return COLONIAS_COYOACAN.find((colonia) => normalizeColoniaKey(colonia) === key);
+}
+
 /** Centro aproximado de Coyoacán, CDMX */
 export const COYOACAN_CENTER = {
   latitude: 19.3467,

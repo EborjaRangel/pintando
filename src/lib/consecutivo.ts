@@ -17,10 +17,15 @@ export async function loadConsecutivosById(
   );
 }
 
+/** Misma puerta: el texto coincide y el pin está a unos metros del registro ya guardado. */
+const SAME_DOOR_METERS = 15;
+
 export async function findDuplicateHouse(
   db: Pick<PrismaClient, "$queryRaw">,
   colonia: string,
   address: string,
+  latitude: number,
+  longitude: number,
   excludeId?: string
 ): Promise<{ id: string; folio: number; consecutivo: number } | null> {
   const rows = excludeId
@@ -30,6 +35,13 @@ export async function findDuplicateHouse(
         WHERE colonia = ${colonia}
           AND lower(trim(address)) = lower(trim(${address}))
           AND id <> ${excludeId}
+          AND (
+            6371000 * 2 * asin(sqrt(
+              power(sin(radians(latitude - ${latitude}) / 2), 2) +
+              cos(radians(${latitude})) * cos(radians(latitude)) *
+              power(sin(radians(longitude - ${longitude}) / 2), 2)
+            ))
+          ) < ${SAME_DOOR_METERS}
         LIMIT 1
       `
     : await db.$queryRaw<Array<{ id: string; folio: number; consecutivo: number }>>`
@@ -37,6 +49,13 @@ export async function findDuplicateHouse(
         FROM "House"
         WHERE colonia = ${colonia}
           AND lower(trim(address)) = lower(trim(${address}))
+          AND (
+            6371000 * 2 * asin(sqrt(
+              power(sin(radians(latitude - ${latitude}) / 2), 2) +
+              cos(radians(${latitude})) * cos(radians(latitude)) *
+              power(sin(radians(longitude - ${longitude}) / 2), 2)
+            ))
+          ) < ${SAME_DOOR_METERS}
         LIMIT 1
       `;
   return rows[0] ?? null;

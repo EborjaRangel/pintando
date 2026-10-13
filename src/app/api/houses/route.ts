@@ -44,7 +44,13 @@ export async function POST(request: Request) {
     const data = await houseSchema.validate(body, { abortEarly: false });
 
     const address = sanitizeCdmxAddress(data.address);
-    const duplicate = await findDuplicateHouse(prisma, data.colonia, address);
+    const duplicate = await findDuplicateHouse(
+      prisma,
+      data.colonia,
+      address,
+      data.latitude,
+      data.longitude
+    );
     if (duplicate) {
       return NextResponse.json(
         {
