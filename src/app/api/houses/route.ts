@@ -7,6 +7,10 @@ import { yupErrorDetails } from "@/lib/yup-error";
 import { housesWhereForRole } from "@/lib/house-access";
 import { sanitizeCdmxAddress } from "@/lib/mapbox-geocode";
 import {
+  addressConColoniaOficial,
+  coloniaOficialEnServidor,
+} from "@/lib/colonia-polygon-server";
+import {
   findDuplicateHouse,
   nextConsecutivoForColonia,
   withConsecutivoRetry,
@@ -43,10 +47,11 @@ export async function POST(request: Request) {
     const body = await request.json();
     const data = await houseSchema.validate(body, { abortEarly: false });
 
-    const address = sanitizeCdmxAddress(data.address);
+    const colonia = coloniaOficialEnServidor(data.latitude, data.longitude) ?? data.colonia;
+    const address = addressConColoniaOficial(sanitizeCdmxAddress(data.address), colonia);
     const duplicate = await findDuplicateHouse(
       prisma,
-      data.colonia,
+      colonia,
       address,
       data.latitude,
       data.longitude
@@ -54,7 +59,7 @@ export async function POST(request: Request) {
     if (duplicate) {
       return NextResponse.json(
         {
-          error: `Esa dirección ya está capturada en ${data.colonia} (consecutivo ${duplicate.consecutivo}). No se puede repetir.`,
+          error: `Esa dirección ya está capturada en ${colonia} (consecutivo ${duplicate.consecutivo}). No se puede repetir.`,
           houseId: duplicate.id,
         },
         { status: 409 }
@@ -63,11 +68,11 @@ export async function POST(request: Request) {
 
     const house = await withConsecutivoRetry(() =>
       prisma.$transaction(async (tx) => {
-        const consecutivo = await nextConsecutivoForColonia(tx, data.colonia);
+        const consecutivo = await nextConsecutivoForColonia(tx, colonia);
         return tx.house.create({
           data: {
             address,
-            colonia: data.colonia,
+            colonia,
             direccionColoniaManual: data.direccionColoniaManual || null,
             consecutivo,
             latitude: data.latitude,
